@@ -7,7 +7,7 @@ void main() async {
 
   await Supabase.initialize(
     url: 'https://urjdpdhzmqaetquydrhj.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVyamRwZGh6bXFhZXRxdXlkcmhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1NjcwNjgsImV4cCI6MjA5MTE0MzA2OH0.MhDW8yuKQbLmzOngI0DfQEhCf2neqvcf1A7eBGE4LFw',
+    anonKey: 'sb_publishable_AaKn2jIvuUg37BQVgMBdcA_p2FfezNe',
   );
 
   runApp(const MainApp());
@@ -19,7 +19,13 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: Home(),
+      title: 'Food Delivery',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFFF6B00)),
+        useMaterial3: true,
+      ),
+      home: const Home(),
     );
   }
 }
