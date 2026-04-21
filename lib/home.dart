@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'services/supabase_service.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -9,219 +9,102 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  final supabase = Supabase.instance.client;
+  final service = SupabaseService();
 
-  List<dynamic> restaurants = [];
-  List<dynamic> categories = [];
-  List<dynamic> items = [];
-
-  bool isLoading = true;
-  int _currentIndex = 0;
+  late Future<List<dynamic>> restaurants;
+  late Future<List<dynamic>> categories;
+  late Future<List<dynamic>> items;
 
   @override
   void initState() {
     super.initState();
-    loadData();
-  }
-
-  Future<void> loadData() async {
-    final res = await supabase.from('restaurant').select();
-    final cat = await supabase.from('category').select();
-    final itm = await supabase.from('item').select();
-
-    setState(() {
-      restaurants = res;
-      categories = cat;
-      items = itm;
-      isLoading = false;
-    });
+    restaurants = service.getRestaurants();
+    categories = service.getCategories();
+    items = service.getItems();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
     return Scaffold(
+      appBar: AppBar(title: const Text("Food App")),
       body: SingleChildScrollView(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 40),
-
-            // Search Bar
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: "What you want to eat today",
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                ),
-              ),
-            ),
-
-            // Promo Banner
-            SizedBox(
-              height: 150,
-              child: PageView(
-                children: [
-                  _promoCard(Colors.orange),
-                  _promoCard(Colors.red),
-                  _promoCard(Colors.green),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Categories
-            _sectionTitle("Categories"),
-            SizedBox(
-              height: 110,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: categories.map((cat) {
-                  return _categoryItem(cat['categoryname'] ?? 'No Name');
-                }).toList(),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Restaurants
-            _sectionTitle("Nearby Restaurants"),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              childAspectRatio: 0.8,
-              children: restaurants.map((res) {
-                return _restaurantCard(
-                  res['resname'] ?? 'No Name',
-                  res['rating']?.toString() ?? '0.0',
-                );
-              }).toList(),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Popular Cuisine
-            _sectionTitle("Popular Cuisine"),
-            ListView(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              children: items.map((item) {
-                return _foodItem(
-                  item['itemname'] ?? 'No Name',
-                  "RM${item['itemprice'] ?? '0'}",
-                );
-              }).toList(),
-            ),
+            _buildSearchBar(),
+            _buildBanner(),
+            _buildSectionHeader('Categories'),
+            _buildCategories(),
+            _buildSectionHeader('Nearby Restaurants'),
+            _buildRestaurants(),
+            _buildSectionHeader('Popular Items'),
+            _buildItems(),
+            const SizedBox(height: 24),
           ],
         ),
       ),
-
-      // Bottom Navigation
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: "Search"),
-          BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: "Cart"),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Account"),
-        ],
-      ),
     );
   }
 
-  // ================= UI WIDGETS =================
-
-  Widget _promoCard(Color color) {
+  // Search Bar
+  Widget _buildSearchBar() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(12),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: TextField(
+        decoration: InputDecoration(
+          hintText: "What do you want to eat?",
+          prefixIcon: const Icon(Icons.search),
+          filled: true,
+          fillColor: Colors.grey.shade100,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide.none,
+          ),
         ),
       ),
     );
   }
 
-  Widget _categoryItem(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: Column(
+  // Promo Banner
+  Widget _buildBanner() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      height: 140,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFF9800),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      alignment: Alignment.center,
+      child: const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(12),
+          Text(
+            'WEEKLY SPECIAL OFFER',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
             ),
           ),
-          const SizedBox(height: 5),
-          Text(title),
+          SizedBox(height: 8),
+          Text(
+            '50% OFF',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _restaurantCard(String name, String rating) {
-    return Card(
-      margin: const EdgeInsets.all(10),
-      child: Column(
-        children: [
-          Expanded(
-            child: Container(color: Colors.grey[300]),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name),
-                Row(
-                  children: [
-                    const Icon(Icons.star, color: Colors.orange, size: 16),
-                    const SizedBox(width: 5),
-                    Text(rating),
-                  ],
-                ),
-              ],
-            ),
-          )
-        ],
-      ),
-    );
-  }
-
-  Widget _foodItem(String name, String price) {
-    return ListTile(
-      leading: Container(
-        width: 50,
-        height: 50,
-        color: Colors.grey[300],
-      ),
-      title: Text(name),
-      trailing: Text(price),
-    );
-  }
-
-  Widget _sectionTitle(String title) {
+  // See More
+  Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -229,9 +112,323 @@ class _HomeState extends State<Home> {
             title,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          const Text("See more"),
+          TextButton(
+            onPressed: () {},
+            child: const Text('See more'),
+          ),
         ],
       ),
     );
   }
+
+  // Categories
+  Widget _buildCategories() {
+    return FutureBuilder<List<dynamic>>(
+      future: categories,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const SizedBox(
+            height: 100,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final data = snapshot.data!;
+
+        return SizedBox(
+          height: 100,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: data.length,
+            itemBuilder: (context, index) {
+              final category = data[index];
+              return _CategoryCard(
+                name: category['categoryname'] ?? '',
+                imageUrl: category['categoryimage'] ?? '',
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  // Restaurants
+  Widget _buildRestaurants() {
+    return FutureBuilder<List<dynamic>>(
+      future: restaurants,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const SizedBox(
+            height: 190,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final data = snapshot.data!;
+
+        return SizedBox(
+          height: 190,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: data.length,
+            itemBuilder: (context, index) {
+              final res = data[index];
+              return _RestaurantCard(
+                name: res['resname'] ?? '',
+                address: res['resaddress'] ?? '',
+                imageUrl: res['resimage'] ?? '',
+                rating: (res['rating'] ?? 0).toDouble(),
+                isHalal: res['ishalal'] ?? false,
+                eta: res['eta'] ?? '~10mins',
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  // Popular Items
+  Widget _buildItems() {
+    return FutureBuilder<List<dynamic>>(
+      future: items,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final data = snapshot.data!;
+
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: data.length,
+          itemBuilder: (context, index) {
+            final item = data[index];
+            return _ItemTile(
+              name: item['itemname'] ?? '',
+              desc: item['itemdesc'] ?? '',
+              imageUrl: item['itemimage'] ?? '',
+              price: (item['itemprice'] ?? 0).toDouble(),
+              isHalal: item['ishalal'] ?? false,
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+// Category Card
+class _CategoryCard extends StatelessWidget {
+  const _CategoryCard({required this.name, required this.imageUrl});
+
+  final String name;
+  final String imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: Column(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: imageUrl.isNotEmpty
+                ? Image.network(
+              imageUrl,
+              width: 64,
+              height: 64,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _placeholder(),
+            )
+                : _placeholder(),
+          ),
+          const SizedBox(height: 6),
+          Text(name, style: const TextStyle(fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  Widget _placeholder() => Container(
+    width: 64,
+    height: 64,
+    color: Colors.orange.shade100,
+    child: const Icon(Icons.fastfood, color: Colors.orange),
+  );
+}
+
+// Restaurant Card
+class _RestaurantCard extends StatelessWidget {
+  const _RestaurantCard({
+    required this.name,
+    required this.address,
+    required this.imageUrl,
+    required this.rating,
+    required this.isHalal,
+    required this.eta,
+  });
+
+  final String name, address, imageUrl, eta;
+  final double rating;
+  final bool isHalal;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 180,
+      margin: const EdgeInsets.only(right: 16),
+      child: Card(
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Food image
+            imageUrl.isNotEmpty
+                ? Image.network(
+              imageUrl,
+              height: 100,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _imagePlaceholder(),
+            )
+                : _imagePlaceholder(),
+
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Name
+                  Text(
+                    name,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  // Rating + ETA
+                  Row(
+                    children: [
+                      const Icon(Icons.star, color: Colors.amber, size: 14),
+                      Text(
+                        ' $rating  $eta',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  // Halal badge
+                  Text(
+                    isHalal ? 'Halal' : 'Non-Halal',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: isHalal ? Colors.green : Colors.red,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _imagePlaceholder() => Container(
+    height: 100,
+    color: Colors.orange.shade50,
+    child: const Center(
+      child: Icon(Icons.restaurant, size: 36, color: Colors.orange),
+    ),
+  );
+}
+
+// Item tile
+class _ItemTile extends StatelessWidget {
+  const _ItemTile({
+    required this.name,
+    required this.desc,
+    required this.imageUrl,
+    required this.price,
+    required this.isHalal,
+  });
+
+  final String name, desc, imageUrl;
+  final double price;
+  final bool isHalal;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape:
+      RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(8),
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: imageUrl.isNotEmpty
+              ? Image.network(
+            imageUrl,
+            width: 60,
+            height: 60,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _placeholder(),
+          )
+              : _placeholder(),
+        ),
+        title: Text(
+          name,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (desc.isNotEmpty)
+              Text(
+                desc,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12),
+              ),
+            const SizedBox(height: 2),
+            Text(
+              isHalal ? 'Halal' : 'Non-Halal',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: isHalal ? Colors.green : Colors.red,
+              ),
+            ),
+          ],
+        ),
+        trailing: Text(
+          'RM ${price.toStringAsFixed(2)}',
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _placeholder() => Container(
+    width: 60,
+    height: 60,
+    color: Colors.orange.shade50,
+    child: const Icon(Icons.fastfood, color: Colors.orange),
+  );
 }
