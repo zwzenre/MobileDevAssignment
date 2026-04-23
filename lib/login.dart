@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'main.dart';
 import 'services/supabase_service.dart';
 import 'home.dart';
 import 'signup.dart';
@@ -19,6 +20,13 @@ class _LoginPageState extends State<LoginPage> {
   bool isLoading = false;
 
   void login() async {
+    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill all fields")),
+      );
+      return;
+    }
+
     setState(() => isLoading = true);
 
     try {
@@ -29,11 +37,11 @@ class _LoginPageState extends State<LoginPage> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const Home()),
+        MaterialPageRoute(builder: (_) => const AuthGate()),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Login failed")),
+        SnackBar(content: Text(e.toString())),
       );
     }
 
@@ -50,7 +58,7 @@ class _LoginPageState extends State<LoginPage> {
 
             const SizedBox(height: 80),
 
-            // ICON
+            // icon
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -88,7 +96,7 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 children: [
 
-                  // EMAIL
+                  // email
                   TextField(
                     controller: emailController,
                     decoration: InputDecoration(
@@ -106,7 +114,7 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 15),
 
-                  // PASSWORD
+                  // password
                   TextField(
                     controller: passwordController,
                     obscureText: true,
@@ -125,7 +133,7 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 25),
 
-                  // LOGIN BUTTON
+                  // login button
                   ElevatedButton(
                     onPressed: isLoading ? null : login,
                     style: ElevatedButton.styleFrom(
@@ -145,7 +153,7 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 20),
 
-                  // REGISTER TEXT
+                  // register text
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
