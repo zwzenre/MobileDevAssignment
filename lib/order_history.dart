@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'order_detail.dart';
 
 class OrderHistory extends StatefulWidget {
   const OrderHistory({super.key});
@@ -75,6 +76,16 @@ class _OrderHistoryState extends State<OrderHistory> {
               borderRadius: BorderRadius.circular(15),
             ),
             child: ListTile(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => OrderDetail(
+                      orderId: order['orderid'],
+                    ),
+                  ),
+                );
+              },
               title: Text("Order #${order['orderid']}"),
               subtitle: Text("Date: ${order['orderdate']}"),
               trailing: Text(
