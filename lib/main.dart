@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'login.dart';
 import 'main_navigation.dart';
 
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 

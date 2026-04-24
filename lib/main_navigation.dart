@@ -4,6 +4,7 @@ import 'search.dart';
 import 'cart.dart';
 import 'account.dart';
 
+
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
 
@@ -16,7 +17,7 @@ class _MainNavigationState extends State<MainNavigation> {
 
   final pages = const [
     Home(),
-    Search(),
+    SearchPage(),
     Cart(),
     AccountPage(),
   ];
