@@ -1,81 +1,94 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class Search extends StatefulWidget {
-  const Search({super.key});
+class SearchPage extends StatefulWidget {
+  const SearchPage({super.key});
 
   @override
-  State<Search> createState() => _SearchState();
+  State<SearchPage> createState() => _SearchPageState();
 }
 
-class _SearchState extends State<Search> {
+class _SearchPageState extends State<SearchPage> {
   final supabase = Supabase.instance.client;
+
+  final TextEditingController searchController = TextEditingController();
 
   List items = [];
   List categories = [];
-  List filteredItems = [];
 
+  String searchText = "";
   String selectedCategory = "All";
-  bool isLoading = true;
 
-  final searchController = TextEditingController();
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    fetchData(); // load items + categories
+    fetchData(); // load data
   }
 
+  @override
+  void dispose() {
+    searchController.dispose(); // clean up
+    super.dispose();
+  }
+
+  // fetch items + categories
   Future<void> fetchData() async {
     try {
-      final itemData = await supabase.from('item').select();
-      final categoryData = await supabase.from('category').select();
+      final itemData = await supabase.from('Item').select();
+      final catData = await supabase.from('Category').select();
 
       setState(() {
         items = itemData;
-        categories = categoryData;
-        filteredItems = itemData;
+        categories = catData;
         isLoading = false;
       });
     } catch (e) {
-      print(e);
       setState(() => isLoading = false);
     }
   }
 
-  void applyFilter() {
-    final query = searchController.text.toLowerCase();
+  // filter logic
+  List filteredItems() {
+    Map<String, dynamic>? selectedCat;
 
-    final results = items.where((item) {
+    try {
+      selectedCat = categories.firstWhere(
+            (c) => c['categoryname'] == selectedCategory,
+      );
+    } catch (e) {
+      selectedCat = null;
+    }
+
+    return items.where((item) {
       final name = item['itemname'].toString().toLowerCase();
 
-      final matchSearch = name.contains(query);
+      final matchSearch = name.contains(searchText.toLowerCase());
 
-      final matchCategory = selectedCategory == "All"
-          ? true
-          : item['categoryid'].toString() ==
-          categories
-              .firstWhere((c) =>
-          c['categoryname'] == selectedCategory)['categoryid']
-              .toString();
+      final matchCategory = selectedCategory == "All" ||
+          (selectedCat != null &&
+              item['categoryid'] == selectedCat['categoryid']);
 
       return matchSearch && matchCategory;
     }).toList();
-
-    setState(() {
-      filteredItems = results;
-    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final results = filteredItems();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F5F2),
+
       appBar: AppBar(
         title: const Text("Search"),
         backgroundColor: Colors.orange,
       ),
-      body: Column(
+
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
         children: [
 
           // search bar
@@ -83,10 +96,25 @@ class _SearchState extends State<Search> {
             padding: const EdgeInsets.all(15),
             child: TextField(
               controller: searchController,
-              onChanged: (value) => applyFilter(),
+              autofocus: true,
+              onChanged: (value) {
+                setState(() => searchText = value);
+              },
               decoration: InputDecoration(
                 hintText: "Search food...",
                 prefixIcon: const Icon(Icons.search),
+
+                // clear
+                suffixIcon: searchText.isNotEmpty
+                    ? IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () {
+                    searchController.clear();
+                    setState(() => searchText = "");
+                  },
+                )
+                    : null,
+
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
@@ -102,39 +130,10 @@ class _SearchState extends State<Search> {
             height: 50,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
               children: [
-
-                // ALL chip
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 5),
-                  child: ChoiceChip(
-                    label: const Text("All"),
-                    selected: selectedCategory == "All",
-                    onSelected: (selected) {
-                      setState(() => selectedCategory = "All");
-                      applyFilter();
-                    },
-                    selectedColor: Colors.orange,
-                  ),
-                ),
-
-                // dynamic categories
+                _chip("All"),
                 ...categories.map((cat) {
-                  final name = cat['categoryname'];
-
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 5),
-                    child: ChoiceChip(
-                      label: Text(name),
-                      selected: selectedCategory == name,
-                      onSelected: (selected) {
-                        setState(() => selectedCategory = name);
-                        applyFilter();
-                      },
-                      selectedColor: Colors.orange,
-                    ),
-                  );
+                  return _chip(cat['categoryname']);
                 }).toList(),
               ],
             ),
@@ -144,34 +143,65 @@ class _SearchState extends State<Search> {
 
           // results
           Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : filteredItems.isEmpty
+            child: results.isEmpty
                 ? const Center(
               child: Text(
-                "No results found",
+                "No items found",
                 style: TextStyle(color: Colors.grey),
               ),
             )
                 : ListView.builder(
-              itemCount: filteredItems.length,
+              itemCount: results.length,
               itemBuilder: (context, index) {
-                final item = filteredItems[index];
+                final item = results[index];
 
-                return Card(
+                return Container(
                   margin: const EdgeInsets.symmetric(
-                      horizontal: 15, vertical: 8),
-                  shape: RoundedRectangleBorder(
+                      horizontal: 15, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(15),
                   ),
                   child: ListTile(
+                    leading: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.network(
+                        item['image_url'] ?? '',
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+
+                        loadingBuilder: (context, child, progress) {
+                          if (progress == null) return child;
+                          return Container(
+                            width: 50,
+                            height: 50,
+                            alignment: Alignment.center,
+                            child: const CircularProgressIndicator(strokeWidth: 2),
+                          );
+                        },
+
+                        // fallback
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: Colors.orange[100],
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.fastfood, color: Colors.orange),
+                          );
+                        },
+                      )
+                    ),
                     title: Text(item['itemname']),
-                    subtitle: Text(item['itemdesc'] ?? ''),
+                    subtitle:
+                    Text(item['itemdesc'] ?? ''),
                     trailing: Text(
-                      "RM ${item['itemprice']}",
+                      "RM ${double.parse(item['itemprice'].toString()).toStringAsFixed(2)}",
                       style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                 );
@@ -179,6 +209,23 @@ class _SearchState extends State<Search> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // reusable chip
+  Widget _chip(String label) {
+    final isSelected = selectedCategory == label;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 5),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: isSelected,
+        selectedColor: Colors.orange,
+        onSelected: (_) {
+          setState(() => selectedCategory = label);
+        },
       ),
     );
   }
