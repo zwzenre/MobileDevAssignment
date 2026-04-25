@@ -1,134 +1,104 @@
 import 'package:flutter/material.dart';
 import 'services/supabase_service.dart';
 
-class AllItemsPage extends StatelessWidget {
-  const AllItemsPage({super.key});
+class AllItemsPage extends StatefulWidget {
+  final dynamic categoryId;
+  final String categoryName;
+
+  const AllItemsPage({
+    super.key,
+    this.categoryId,
+    this.categoryName = 'All Items',
+  });
+
+  @override
+  State<AllItemsPage> createState() => _AllItemsPageState();
+}
+
+class _AllItemsPageState extends State<AllItemsPage> {
+  final SupabaseService _service = SupabaseService();
+
+  List<dynamic> _filteredItems = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchItems();
+  }
+
+  Future<void> _fetchItems() async {
+    try {
+      final allItems = await _service.getItems();
+
+      List filtered = allItems;
+
+      if (widget.categoryId != null) {
+        filtered = allItems.where((i) {
+          return i['categoryid']?.toString() ==
+              widget.categoryId?.toString();
+        }).toList();
+      }
+
+      setState(() {
+        _filteredItems = filtered;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      print("Error: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final service = SupabaseService();
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text("All Items"),
+        title: Text(widget.categoryName),
       ),
-      body: FutureBuilder<List<dynamic>>(
-        future: service.getItems(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final data = snapshot.data!;
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: data.length,
-            itemBuilder: (context, index) {
-              final item = data[index];
-
-              return Card(
-                margin: const EdgeInsets.only(bottom: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      // image
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: SizedBox(
-                          width: 80,
-                          height: 80,
-                          child: item['image_url'] != null &&
-                              item['image_url']
-                                  .toString()
-                                  .isNotEmpty
-                              ? Image.network(
-                            item['image_url'],
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                _placeholder(),
-                          )
-                              : _placeholder(),
-                        ),
-                      ),
-
-                      const SizedBox(width: 14),
-
-                      // text
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item['itemname'] ?? '',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-
-                            const SizedBox(height: 4),
-
-                            if ((item['itemdesc'] ?? '')
-                                .toString()
-                                .isNotEmpty)
-                              Text(
-                                item['itemdesc'],
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style:
-                                const TextStyle(fontSize: 13),
-                              ),
-
-                            const SizedBox(height: 6),
-
-                            Text(
-                              item['ishalal'] == true
-                                  ? 'Halal'
-                                  : 'Non-Halal',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: item['ishalal'] == true
-                                    ? Colors.green
-                                    : Colors.red,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // price
-                      Text(
-                        'RM ${(item['itemprice'] ?? 0).toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _filteredItems.isEmpty
+          ? const Center(
+        child: Text(
+          "No items in this category",
+          style: TextStyle(fontSize: 16),
+        ),
+      )
+          : ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _filteredItems.length,
+        itemBuilder: (context, index) {
+          final i = _filteredItems[index];
+          return Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: ListTile(
+              leading: i['image_url'] != null
+                  ? Image.network(
+                i['image_url'],
+                width: 70,
+                height: 70,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) =>
+                    _placeholder(),
+              )
+                  : _placeholder(),
+              title: Text(i['itemname'] ?? ''),
+              subtitle: Text(i['itemdesc'] ?? ''),
+              trailing: Text(
+                'RM ${(i['itemprice'] ?? 0).toDouble().toStringAsFixed(2)}',
+              ),
+            ),
           );
         },
       ),
     );
   }
 
-  // placeholder
-  Widget _placeholder() {
-    return Container(
-      color: Colors.orange.shade100,
-      child: const Center(
-        child: Icon(Icons.fastfood, color: Colors.orange),
-      ),
-    );
-  }
+  Widget _placeholder() => Container(
+    width: 70,
+    height: 70,
+    color: Colors.orange.shade100,
+    child: const Icon(Icons.fastfood, color: Colors.orange),
+  );
 }
