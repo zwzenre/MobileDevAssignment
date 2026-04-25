@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -24,116 +25,91 @@ class _SearchPageState extends State<SearchPage> {
   @override
   void initState() {
     super.initState();
-    fetchData(); // load data
+    fetchData();
   }
 
-  @override
-  void dispose() {
-    searchController.dispose(); // clean up
-    super.dispose();
-  }
-
-  // fetch items + categories
+  // fetch data
   Future<void> fetchData() async {
     try {
-      final itemData = await supabase.from('Item').select();
-      final catData = await supabase.from('Category').select();
+      final itemData = await supabase.from('item').select();
+      final categoryData = await supabase.from('category').select();
 
       setState(() {
         items = itemData;
-        categories = catData;
+        categories = categoryData;
         isLoading = false;
       });
     } catch (e) {
+      print("Error loading data: $e");
       setState(() => isLoading = false);
     }
   }
 
   // filter logic
-  List filteredItems() {
-    Map<String, dynamic>? selectedCat;
-
-    try {
-      selectedCat = categories.firstWhere(
-            (c) => c['categoryname'] == selectedCategory,
-      );
-    } catch (e) {
-      selectedCat = null;
-    }
-
+  List get filteredItems {
     return items.where((item) {
-      final name = item['itemname'].toString().toLowerCase();
+      final name = item['itemname']?.toLowerCase() ?? '';
+      final categoryId = item['categoryid'];
 
-      final matchSearch = name.contains(searchText.toLowerCase());
+      final matchesSearch = name.contains(searchText.toLowerCase());
 
-      final matchCategory = selectedCategory == "All" ||
-          (selectedCat != null &&
-              item['categoryid'] == selectedCat['categoryid']);
+      if (selectedCategory == "All") {
+        return matchesSearch;
+      }
 
-      return matchSearch && matchCategory;
+      final category = categories.firstWhere(
+            (c) => c['categoryid'] == categoryId,
+        orElse: () => null,
+      );
+
+      final categoryName = category?['categoryname'] ?? '';
+
+      return matchesSearch && categoryName == selectedCategory;
     }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final results = filteredItems();
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F5F2),
-
       appBar: AppBar(
         title: const Text("Search"),
         backgroundColor: Colors.orange,
+        foregroundColor: Colors.white,
       ),
-
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
         children: [
-
           // search bar
           Padding(
-            padding: const EdgeInsets.all(15),
+            padding: const EdgeInsets.all(12),
             child: TextField(
               controller: searchController,
-              autofocus: true,
               onChanged: (value) {
-                setState(() => searchText = value);
+                setState(() {
+                  searchText = value;
+                });
               },
               decoration: InputDecoration(
                 hintText: "Search food...",
                 prefixIcon: const Icon(Icons.search),
-
-                // clear
-                suffixIcon: searchText.isNotEmpty
-                    ? IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () {
-                    searchController.clear();
-                    setState(() => searchText = "");
-                  },
-                )
-                    : null,
-
-                filled: true,
-                fillColor: Colors.white,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide.none,
+                  borderRadius: BorderRadius.circular(30),
                 ),
               ),
             ),
           ),
 
-          // category chips
+          // category filter
           SizedBox(
             height: 50,
             child: ListView(
               scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               children: [
-                _chip("All"),
-                ...categories.map((cat) {
-                  return _chip(cat['categoryname']);
+                _buildCategoryChip("All"),
+                ...categories.map((c) {
+                  return _buildCategoryChip(c['categoryname']);
                 }).toList(),
               ],
             ),
@@ -141,70 +117,18 @@ class _SearchPageState extends State<SearchPage> {
 
           const SizedBox(height: 10),
 
-          // results
+          // item list
           Expanded(
-            child: results.isEmpty
+            child: filteredItems.isEmpty
                 ? const Center(
-              child: Text(
-                "No items found",
-                style: TextStyle(color: Colors.grey),
-              ),
+              child: Text("No items found"),
             )
                 : ListView.builder(
-              itemCount: results.length,
+              padding: const EdgeInsets.all(12),
+              itemCount: filteredItems.length,
               itemBuilder: (context, index) {
-                final item = results[index];
-
-                return Container(
-                  margin: const EdgeInsets.symmetric(
-                      horizontal: 15, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: ListTile(
-                    leading: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.network(
-                        item['image_url'] ?? '',
-                        width: 50,
-                        height: 50,
-                        fit: BoxFit.cover,
-
-                        loadingBuilder: (context, child, progress) {
-                          if (progress == null) return child;
-                          return Container(
-                            width: 50,
-                            height: 50,
-                            alignment: Alignment.center,
-                            child: const CircularProgressIndicator(strokeWidth: 2),
-                          );
-                        },
-
-                        // fallback
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: Colors.orange[100],
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Icons.fastfood, color: Colors.orange),
-                          );
-                        },
-                      )
-                    ),
-                    title: Text(item['itemname']),
-                    subtitle:
-                    Text(item['itemdesc'] ?? ''),
-                    trailing: Text(
-                      "RM ${double.parse(item['itemprice'].toString()).toStringAsFixed(2)}",
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                );
+                final item = filteredItems[index];
+                return _buildItemCard(item);
               },
             ),
           ),
@@ -213,20 +137,63 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  // reusable chip
-  Widget _chip(String label) {
-    final isSelected = selectedCategory == label;
+  // category chip
+  Widget _buildCategoryChip(String name) {
+    final isSelected = selectedCategory == name;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 5),
+      padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
-        label: Text(label),
+        label: Text(name),
         selected: isSelected,
         selectedColor: Colors.orange,
         onSelected: (_) {
-          setState(() => selectedCategory = label);
+          setState(() {
+            selectedCategory = name;
+          });
         },
       ),
+    );
+  }
+
+  // item card
+  Widget _buildItemCard(Map item) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        leading: item['image_url'] != null &&
+            item['image_url'].toString().isNotEmpty
+            ? CachedNetworkImage(
+          imageUrl: item['image_url'],
+          width: 60,
+          height: 60,
+          fit: BoxFit.cover,
+          placeholder: (_, __) => Container(
+            width: 60,
+            height: 60,
+            color: Colors.orange.shade100,
+            child: const Center(
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+          errorWidget: (_, __, ___) => _placeholder(),
+        )
+            : _placeholder(),
+        title: Text(item['itemname'] ?? ''),
+        subtitle: Text(item['itemdesc'] ?? ''),
+        trailing: Text(
+          'RM ${(item['itemprice'] ?? 0).toDouble().toStringAsFixed(2)}',
+        ),
+      ),
+    );
+  }
+
+  Widget _placeholder() {
+    return Container(
+      width: 60,
+      height: 60,
+      color: Colors.orange.shade100,
+      child: const Icon(Icons.fastfood, color: Colors.orange),
     );
   }
 }

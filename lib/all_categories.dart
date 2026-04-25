@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'services/supabase_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'all_items.dart';
 
 class AllCategoriesPage extends StatelessWidget {
@@ -138,10 +139,16 @@ class AllCategoriesPage extends StatelessWidget {
                   height: 100, // Fixed height
                   child: category['image_url'] != null &&
                       category['image_url'].toString().isNotEmpty
-                      ? Image.network(
-                    category['image_url'],
+                      ? CachedNetworkImage(
+                    imageUrl: category['image_url'] ?? '',
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _placeholder(),
+                    placeholder: (context, url) => Container(
+                      color: Colors.orange.shade100,
+                      child: const Center(
+                        child: CircularProgressIndicator(color: Colors.orange),
+                      ),
+                    ),
+                    errorWidget: (context, url, error) => _placeholder(),
                   )
                       : _placeholder(),
                 ),

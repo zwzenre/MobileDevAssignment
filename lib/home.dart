@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'services/supabase_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'search.dart';
 import 'all_categories.dart';
 import 'all_restaurants.dart';
@@ -134,9 +135,7 @@ class _HomeState extends State<Home> {
     );
   }
 
-  // =========================
-  // CATEGORY (CLICKABLE)
-  // =========================
+  // category
   Widget _buildCategories() {
     return FutureBuilder<List<dynamic>>(
       future: categories,
@@ -175,13 +174,18 @@ class _HomeState extends State<Home> {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: c['image_url'] != null
-                            ? Image.network(
-                          c['image_url'],
+                        child: c['image_url'] != null && c['image_url'].toString().isNotEmpty
+                            ? CachedNetworkImage(
+                          imageUrl: c['image_url'],
                           width: 64,
                           height: 64,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _boxIcon(),
+                          placeholder: (context, _) => const SizedBox(
+                            width: 64,
+                            height: 64,
+                            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                          ),
+                          errorWidget: (_, __, ___) => _boxIcon(),
                         )
                             : _boxIcon(),
                       ),
@@ -201,9 +205,7 @@ class _HomeState extends State<Home> {
     );
   }
 
-  // =========================
-  // RESTAURANTS
-  // =========================
+  // restaurants
   Widget _buildRestaurants() {
     return FutureBuilder<List<dynamic>>(
       future: restaurants,
@@ -232,13 +234,17 @@ class _HomeState extends State<Home> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      r['image_url'] != null
-                          ? Image.network(
-                        r['image_url'],
+                      r['image_url'] != null && r['image_url'].toString().isNotEmpty
+                          ? CachedNetworkImage(
+                        imageUrl: r['image_url'],
                         height: 100,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _imgPlaceholder(),
+                        placeholder: (context, _) => const SizedBox(
+                          height: 100,
+                          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                        ),
+                        errorWidget: (_, __, ___) => _imgPlaceholder(),
                       )
                           : _imgPlaceholder(),
                       Padding(
@@ -258,9 +264,7 @@ class _HomeState extends State<Home> {
     );
   }
 
-  // =========================
-  // ITEMS
-  // =========================
+  // items
   Widget _buildItems() {
     return FutureBuilder<List<dynamic>>(
       future: items,
@@ -283,13 +287,18 @@ class _HomeState extends State<Home> {
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
               child: ListTile(
-                leading: i['image_url'] != null
-                    ? Image.network(
-                  i['image_url'],
+                leading: i['image_url'] != null && i['image_url'].toString().isNotEmpty
+                    ? CachedNetworkImage(
+                  imageUrl: i['image_url'],
                   width: 60,
                   height: 60,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _boxIcon(),
+                  placeholder: (context, _) => const SizedBox(
+                    width: 60,
+                    height: 60,
+                    child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  ),
+                  errorWidget: (_, __, ___) => _boxIcon(),
                 )
                     : _boxIcon(),
                 title: Text(i['itemname'] ?? ''),
