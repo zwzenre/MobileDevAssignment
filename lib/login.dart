@@ -21,9 +21,9 @@ class _LoginPageState extends State<LoginPage> {
 
   void login() async {
     if (emailController.text.isEmpty || passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill all fields")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Please fill all fields")));
       return;
     }
 
@@ -40,9 +40,9 @@ class _LoginPageState extends State<LoginPage> {
         MaterialPageRoute(builder: (_) => const AuthGate()),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     }
 
     setState(() => isLoading = false);
@@ -55,7 +55,6 @@ class _LoginPageState extends State<LoginPage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-
             const SizedBox(height: 80),
 
             // icon
@@ -76,10 +75,7 @@ class _LoginPageState extends State<LoginPage> {
 
             const Text(
               "Welcome Back",
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 5),
@@ -95,7 +91,6 @@ class _LoginPageState extends State<LoginPage> {
               padding: const EdgeInsets.symmetric(horizontal: 25),
               child: Column(
                 children: [
-
                   // email
                   TextField(
                     controller: emailController,
@@ -145,10 +140,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     child: isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                      "Login",
-                      style: TextStyle(fontSize: 16),
-                    ),
+                        : const Text("Login", style: TextStyle(fontSize: 16)),
                   ),
 
                   const SizedBox(height: 20),
@@ -162,7 +154,9 @@ class _LoginPageState extends State<LoginPage> {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const SignupPage()),
+                            MaterialPageRoute(
+                              builder: (_) => const SignupPage(),
+                            ),
                           );
                         },
                         child: const Text(

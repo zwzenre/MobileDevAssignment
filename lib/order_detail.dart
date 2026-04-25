@@ -52,21 +52,21 @@ class _OrderDetailState extends State<OrderDetail> {
           : items.isEmpty
           ? const Center(child: Text("No items found"))
           : ListView.builder(
-        itemCount: items.length,
-        itemBuilder: (context, index) {
-          final orderItem = items[index];
-          final item = orderItem['item'];
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final orderItem = items[index];
+                final item = orderItem['item'];
 
-          return ListTile(
-            title: Text(item['itemname']),
-            subtitle: Text("Qty: ${orderItem['quantity']}"),
-            trailing: Text(
-              "RM ${item['itemprice']}",
-              style: const TextStyle(fontWeight: FontWeight.bold),
+                return ListTile(
+                  title: Text(item['itemname']),
+                  subtitle: Text("Qty: ${orderItem['quantity']}"),
+                  trailing: Text(
+                    "RM ${item['itemprice']}",
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                );
+              },
             ),
-          );
-        },
-      ),
     );
   }
 }

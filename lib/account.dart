@@ -52,7 +52,7 @@ class _AccountPageState extends State<AccountPage> {
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const LoginPage()),
-          (route) => false,
+      (route) => false,
     );
   }
 
@@ -65,114 +65,126 @@ class _AccountPageState extends State<AccountPage> {
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
-        children: [
-
-          // header
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.only(top: 60, bottom: 30),
-            decoration: const BoxDecoration(
-              color: Colors.orange,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(40),
-                bottomRight: Radius.circular(40),
-              ),
-            ),
-            child: Column(
               children: [
-                const CircleAvatar(
-                  radius: 40,
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.person, size: 40, color: Colors.orange),
-                ),
-                const SizedBox(height: 10),
+                // header
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.only(top: 60, bottom: 30),
+                  decoration: const BoxDecoration(
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(40),
+                      bottomRight: Radius.circular(40),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      const CircleAvatar(
+                        radius: 40,
+                        backgroundColor: Colors.white,
+                        child: Icon(
+                          Icons.person,
+                          size: 40,
+                          color: Colors.orange,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
 
-                Text(
-                  userData?['username'] ??
-                      user?.email?.split('@')[0] ??
-                      "User",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                      Text(
+                        userData?['username'] ??
+                            user?.email?.split('@')[0] ??
+                            "User",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 30),
-
-          // user info
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              children: [
-
-                infoTile(Icons.email, user?.email ?? "No Email"),
-                infoTile(Icons.person, userData?['username'] ?? "No Username"),
-                infoTile(Icons.phone, userData?['phone'] ?? "No Phone"),
-                infoTile(Icons.location_on, userData?['address'] ?? "No Address"),
 
                 const SizedBox(height: 30),
 
-                // order history
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const OrderHistory()),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    minimumSize: const Size(double.infinity, 50),
-                  ),
-                  child: const Text("Order History"),
-                ),
+                // user info
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: [
+                      infoTile(Icons.email, user?.email ?? "No Email"),
+                      infoTile(
+                        Icons.person,
+                        userData?['username'] ?? "No Username",
+                      ),
+                      infoTile(Icons.phone, userData?['phone'] ?? "No Phone"),
+                      infoTile(
+                        Icons.location_on,
+                        userData?['address'] ?? "No Address",
+                      ),
 
-                const SizedBox(height: 15),
+                      const SizedBox(height: 30),
 
-                // edit button
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const EditProfile()),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  child: const Text("Edit Profile"),
-                ),
+                      // order history
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const OrderHistory(),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          minimumSize: const Size(double.infinity, 50),
+                        ),
+                        child: const Text("Order History"),
+                      ),
 
-                const SizedBox(height: 15),
+                      const SizedBox(height: 15),
 
-                // logout button
-                OutlinedButton(
-                  onPressed: logout,
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                    side: const BorderSide(color: Colors.orange),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  child: const Text(
-                    "Logout",
-                    style: TextStyle(color: Colors.orange),
+                      // edit button
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const EditProfile(),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                        child: const Text("Edit Profile"),
+                      ),
+
+                      const SizedBox(height: 15),
+
+                      // logout button
+                      OutlinedButton(
+                        onPressed: logout,
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 50),
+                          side: const BorderSide(color: Colors.orange),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                        child: const Text(
+                          "Logout",
+                          style: TextStyle(color: Colors.orange),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
     );
   }
 
