@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'services/supabase_service.dart';
 import 'restaurant_details_page.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class AllRestaurantsPage extends StatefulWidget {
   final dynamic categoryId;
@@ -219,17 +220,24 @@ class _AllRestaurantsPageState extends State<AllRestaurantsPage> {
             // Restaurant Image
             ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-              child: restaurant['image_url'] != null && restaurant['image_url'].toString().isNotEmpty
-                  ? Image.network(
-                restaurant['image_url'],
-                height: 150, // Reduced from 180
+              child: restaurant['image_url'] != null &&
+                  restaurant['image_url'].toString().isNotEmpty
+                  ? CachedNetworkImage(
+                imageUrl: restaurant['image_url'],
+                height: 150,
                 width: double.infinity,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+
+                placeholder: (context, _) => const SizedBox(
                   height: 150,
-                  color: Colors.orange[100],
+                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
+
+                errorWidget: (_, __, ___) => Container(
+                  height: 150,
+                  color: Colors.orange,
                   child: const Center(
-                    child: Icon(Icons.restaurant, size: 40, color: Colors.orange),
+                    child: Icon(Icons.restaurant, size: 40, color: Colors.white),
                   ),
                 ),
               )

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'services/supabase_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class AllItemsPage extends StatefulWidget {
   final dynamic categoryId;
@@ -73,14 +74,21 @@ class _AllItemsPageState extends State<AllItemsPage> {
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
             child: ListTile(
-              leading: i['image_url'] != null
-                  ? Image.network(
-                i['image_url'],
+              leading: i['image_url'] != null &&
+                  i['image_url'].toString().isNotEmpty
+                  ? CachedNetworkImage(
+                imageUrl: i['image_url'],
                 width: 70,
                 height: 70,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) =>
-                    _placeholder(),
+
+                placeholder: (context, _) => const SizedBox(
+                  width: 70,
+                  height: 70,
+                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
+
+                errorWidget: (_, __, ___) => _placeholder(),
               )
                   : _placeholder(),
               title: Text(i['itemname'] ?? ''),
