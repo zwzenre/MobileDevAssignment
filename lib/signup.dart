@@ -31,9 +31,9 @@ class _SignupPageState extends State<SignupPage> {
 
       Navigator.pop(context); // go back to login
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     }
 
     setState(() => isLoading = false);
@@ -51,7 +51,6 @@ class _SignupPageState extends State<SignupPage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-
             const SizedBox(height: 20),
 
             // 🍽 ICON
@@ -72,10 +71,7 @@ class _SignupPageState extends State<SignupPage> {
 
             const Text(
               "Create Account",
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 5),
@@ -91,7 +87,6 @@ class _SignupPageState extends State<SignupPage> {
               padding: const EdgeInsets.symmetric(horizontal: 25),
               child: Column(
                 children: [
-
                   // EMAIL
                   TextField(
                     controller: emailController,

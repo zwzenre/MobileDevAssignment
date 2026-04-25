@@ -60,42 +60,41 @@ class _OrderHistoryState extends State<OrderHistory> {
           ? const Center(child: CircularProgressIndicator())
           : orders.isEmpty
           ? const Center(
-        child: Text(
-          "No orders yet",
-          style: TextStyle(fontSize: 16, color: Colors.grey),
-        ),
-      )
+              child: Text(
+                "No orders yet",
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+            )
           : ListView.builder(
-        itemCount: orders.length,
-        itemBuilder: (context, index) {
-          final order = orders[index];
+              itemCount: orders.length,
+              itemBuilder: (context, index) {
+                final order = orders[index];
 
-          return Card(
-            margin: const EdgeInsets.all(10),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: ListTile(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => OrderDetail(
-                      orderId: order['orderid'],
+                return Card(
+                  margin: const EdgeInsets.all(10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: ListTile(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              OrderDetail(orderId: order['orderid']),
+                        ),
+                      );
+                    },
+                    title: Text("Order #${order['orderid']}"),
+                    subtitle: Text("Date: ${order['orderdate']}"),
+                    trailing: Text(
+                      "RM ${order['totalamount']}",
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
                 );
               },
-              title: Text("Order #${order['orderid']}"),
-              subtitle: Text("Date: ${order['orderdate']}"),
-              trailing: Text(
-                "RM ${order['totalamount']}",
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
             ),
-          );
-        },
-      ),
     );
   }
 }
