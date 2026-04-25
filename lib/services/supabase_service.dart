@@ -5,19 +5,19 @@ class SupabaseService {
 
   // Restaurants
   Future<List<dynamic>> getRestaurants() async {
-    final response = await supabase.from('Restaurant').select();
+    final response = await supabase.from('restaurant').select();
     return List<dynamic>.from(response);
   }
 
   // Categories
   Future<List<dynamic>> getCategories() async {
-    final response = await supabase.from('Category').select();
+    final response = await supabase.from('category').select();
     return List<dynamic>.from(response);
   }
 
   // Items
   Future<List<dynamic>> getItems() async {
-    final response = await supabase.from('Item').select();
+    final response = await supabase.from('item').select();
     return List<dynamic>.from(response);
   }
 
@@ -48,16 +48,35 @@ class SupabaseService {
     }
 
     final existing = await supabase
-        .from('User')
+        .from('user')
         .select()
         .eq('userid', user.id);
 
     if (existing.isEmpty) {
-      await supabase.from('User').insert({
+      await supabase.from('user').insert({
         'userid': user.id,
         'email': email,
         'username': email.split('@')[0],
       });
     }
+  }
+
+  Future<List<dynamic>> getRestaurantsByCategory(String categoryId) async {
+    final response = await supabase
+        .from('item')
+        .select('restaurant(*)')
+        .eq('categoryid', categoryId);
+
+    // extract unique restaurants
+    final restaurants = response
+        .map((e) => e['restaurant'])
+        .where((e) => e != null)
+        .toList();
+
+    final unique = {
+      for (var r in restaurants) r['resid']: r
+    }.values.toList();
+
+    return unique;
   }
 }

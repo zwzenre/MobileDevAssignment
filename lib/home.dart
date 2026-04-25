@@ -38,13 +38,13 @@ class _HomeState extends State<Home> {
             _buildSearchBar(),
             _buildBanner(),
 
-            _buildSectionHeader('Categories', AllCategoriesPage()),
+            _buildSectionHeader('Categories', const AllCategoriesPage()),
             _buildCategories(),
 
-            _buildSectionHeader('Nearby Restaurants', AllRestaurantsPage()),
+            _buildSectionHeader('Nearby Restaurants', const AllRestaurantsPage()),
             _buildRestaurants(),
 
-            _buildSectionHeader('Popular Items', AllItemsPage()),
+            _buildSectionHeader('Popular Items', const AllItemsPage()),
             _buildItems(),
 
             const SizedBox(height: 24),
@@ -134,6 +134,9 @@ class _HomeState extends State<Home> {
     );
   }
 
+  // =========================
+  // CATEGORY (CLICKABLE)
+  // =========================
   Widget _buildCategories() {
     return FutureBuilder<List<dynamic>>(
       future: categories,
@@ -153,26 +156,42 @@ class _HomeState extends State<Home> {
             itemCount: data.length,
             itemBuilder: (context, index) {
               final c = data[index];
-              return Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: Column(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: c['image_url'] != null
-                          ? Image.network(
-                        c['image_url'],
-                        width: 64,
-                        height: 64,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _boxIcon(),
-                      )
-                          : _boxIcon(),
+
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AllItemsPage(
+                        categoryId: c['categoryid'],
+                        categoryName: c['categoryname'],
+                      ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(c['categoryname'] ?? '',
-                        style: const TextStyle(fontSize: 12)),
-                  ],
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Column(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: c['image_url'] != null
+                            ? Image.network(
+                          c['image_url'],
+                          width: 64,
+                          height: 64,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _boxIcon(),
+                        )
+                            : _boxIcon(),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        c['categoryname'] ?? '',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -182,6 +201,9 @@ class _HomeState extends State<Home> {
     );
   }
 
+  // =========================
+  // RESTAURANTS
+  // =========================
   Widget _buildRestaurants() {
     return FutureBuilder<List<dynamic>>(
       future: restaurants,
@@ -236,6 +258,9 @@ class _HomeState extends State<Home> {
     );
   }
 
+  // =========================
+  // ITEMS
+  // =========================
   Widget _buildItems() {
     return FutureBuilder<List<dynamic>>(
       future: items,

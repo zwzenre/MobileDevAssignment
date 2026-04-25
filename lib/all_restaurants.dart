@@ -32,18 +32,23 @@ class _AllRestaurantsPageState extends State<AllRestaurantsPage> {
 
   Future<void> _fetchRestaurants() async {
     try {
-      final allRestaurants = await _service.getRestaurants();
-
-      List filtered = List.from(allRestaurants);
       if (widget.categoryId != null) {
-        filtered = filtered.where((r) => r['category_id'] == widget.categoryId).toList();
-      }
+        final data = await _service.getRestaurantsByCategory(widget.categoryId);
 
-      setState(() {
-        _restaurants = filtered;
-        _filteredRestaurants = filtered;
-        _isLoading = false;
-      });
+        setState(() {
+          _restaurants = data;
+          _filteredRestaurants = data;
+          _isLoading = false;
+        });
+      } else {
+        final allRestaurants = await _service.getRestaurants();
+
+        setState(() {
+          _restaurants = allRestaurants;
+          _filteredRestaurants = allRestaurants;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       setState(() => _isLoading = false);
       _showError('Failed to load restaurants: $e');

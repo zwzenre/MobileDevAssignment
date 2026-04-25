@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'services/supabase_service.dart';
-import 'all_restaurants.dart';
+import 'all_items.dart';
 
 class AllCategoriesPage extends StatelessWidget {
   const AllCategoriesPage({super.key});
@@ -112,9 +112,9 @@ class AllCategoriesPage extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => AllRestaurantsPage(
-              categoryId: category['id'],
-              categoryName: category['categoryname'] ?? 'Restaurants',
+            builder: (_) => AllItemsPage(
+              categoryId: category['categoryid'],
+              categoryName: category['categoryname'],
             ),
           ),
         );
