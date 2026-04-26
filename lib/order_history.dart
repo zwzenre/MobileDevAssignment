@@ -52,13 +52,18 @@ class _OrderHistoryState extends State<OrderHistory> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F5F2),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text("Order History"),
-        backgroundColor: Colors.orange,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+        child: CircularProgressIndicator(
+          color: Theme.of(context).colorScheme.primary,
+        ),
+      )
           : orders.isEmpty
           ? const Center(
               child: Text(

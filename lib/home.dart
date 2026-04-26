@@ -30,8 +30,14 @@ class _HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Food App")),
+      appBar: AppBar(
+        title: const Text("Food App"),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: theme.colorScheme.onPrimary,
+      ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -55,7 +61,10 @@ class _HomeState extends State<Home> {
     );
   }
 
+  // search bar
   Widget _buildSearchBar() {
+    final theme = Theme.of(context);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: GestureDetector(
@@ -69,9 +78,10 @@ class _HomeState extends State<Home> {
           child: TextField(
             decoration: InputDecoration(
               hintText: "What do you want to eat?",
-              prefixIcon: const Icon(Icons.search),
+              hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+              prefixIcon: Icon(Icons.search, color: theme.colorScheme.onSurfaceVariant),
               filled: true,
-              fillColor: Colors.grey.shade100,
+              fillColor: theme.colorScheme.surfaceContainerHighest,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(20),
                 borderSide: BorderSide.none,
@@ -83,44 +93,57 @@ class _HomeState extends State<Home> {
     );
   }
 
+  // banner
   Widget _buildBanner() {
+    final theme = Theme.of(context);
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       height: 140,
       decoration: BoxDecoration(
-        color: const Color(0xFFFF9800),
+        color: theme.colorScheme.primary,
         borderRadius: BorderRadius.circular(16),
       ),
       alignment: Alignment.center,
-      child: const Column(
+      child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             'WEEKLY SPECIAL OFFER',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: theme.colorScheme.onPrimary,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
             '50% OFF',
             style: TextStyle(
-                color: Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.w900),
+              color: theme.colorScheme.onPrimary,
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+            ),
           ),
         ],
       ),
     );
   }
 
+  // section header
   Widget _buildSectionHeader(String title, Widget page) {
+    final theme = Theme.of(context);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(title,
-              style:
-              const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurface,
+              )),
           TextButton(
             onPressed: () {
               Navigator.push(
@@ -128,21 +151,27 @@ class _HomeState extends State<Home> {
                 MaterialPageRoute(builder: (_) => page),
               );
             },
-            child: const Text('See more'),
+            child: Text(
+              'See more',
+              style: TextStyle(color: theme.colorScheme.primary),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // category
+  // categories
   Widget _buildCategories() {
     return FutureBuilder<List<dynamic>>(
       future: categories,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const SizedBox(
-              height: 100, child: Center(child: CircularProgressIndicator()));
+          return SizedBox(
+              height: 100,
+              child: Center(
+                  child: CircularProgressIndicator(
+                      color: Theme.of(context).colorScheme.primary)));
         }
 
         final data = snapshot.data!;
@@ -180,10 +209,13 @@ class _HomeState extends State<Home> {
                           width: 64,
                           height: 64,
                           fit: BoxFit.cover,
-                          placeholder: (context, _) => const SizedBox(
+                          placeholder: (context, _) => SizedBox(
                             width: 64,
                             height: 64,
-                            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                            child: Center(
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Theme.of(context).colorScheme.primary)),
                           ),
                           errorWidget: (_, __, ___) => _boxIcon(),
                         )
@@ -192,7 +224,10 @@ class _HomeState extends State<Home> {
                       const SizedBox(height: 6),
                       Text(
                         c['categoryname'] ?? '',
-                        style: const TextStyle(fontSize: 12),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                       ),
                     ],
                   ),
@@ -211,8 +246,11 @@ class _HomeState extends State<Home> {
       future: restaurants,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const SizedBox(
-              height: 190, child: Center(child: CircularProgressIndicator()));
+          return SizedBox(
+              height: 190,
+              child: Center(
+                  child: CircularProgressIndicator(
+                      color: Theme.of(context).colorScheme.primary)));
         }
 
         final data = snapshot.data!;
@@ -229,6 +267,7 @@ class _HomeState extends State<Home> {
                 width: 180,
                 margin: const EdgeInsets.only(right: 16),
                 child: Card(
+                  color: Theme.of(context).colorScheme.surface,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                   child: Column(
@@ -240,18 +279,25 @@ class _HomeState extends State<Home> {
                         height: 100,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        placeholder: (context, _) => const SizedBox(
+                        placeholder: (context, _) => SizedBox(
                           height: 100,
-                          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                          child: Center(
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Theme.of(context).colorScheme.primary)),
                         ),
                         errorWidget: (_, __, ___) => _imgPlaceholder(),
                       )
                           : _imgPlaceholder(),
                       Padding(
                         padding: const EdgeInsets.all(8),
-                        child: Text(r['resname'] ?? '',
-                            style:
-                            const TextStyle(fontWeight: FontWeight.bold)),
+                        child: Text(
+                          r['resname'] ?? '',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
                       )
                     ],
                   ),
@@ -270,9 +316,11 @@ class _HomeState extends State<Home> {
       future: items,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator()));
+          return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Center(
+                  child: CircularProgressIndicator(
+                      color: Theme.of(context).colorScheme.primary)));
         }
 
         final data = snapshot.data!;
@@ -285,6 +333,7 @@ class _HomeState extends State<Home> {
           itemBuilder: (context, index) {
             final i = data[index];
             return Card(
+              color: Theme.of(context).colorScheme.surface,
               margin: const EdgeInsets.only(bottom: 12),
               child: ListTile(
                 leading: i['image_url'] != null && i['image_url'].toString().isNotEmpty
@@ -293,18 +342,32 @@ class _HomeState extends State<Home> {
                   width: 60,
                   height: 60,
                   fit: BoxFit.cover,
-                  placeholder: (context, _) => const SizedBox(
+                  placeholder: (context, _) => SizedBox(
                     width: 60,
                     height: 60,
-                    child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                    child: Center(
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Theme.of(context).colorScheme.primary)),
                   ),
                   errorWidget: (_, __, ___) => _boxIcon(),
                 )
                     : _boxIcon(),
-                title: Text(i['itemname'] ?? ''),
-                subtitle: Text(i['itemdesc'] ?? ''),
+                title: Text(
+                  i['itemname'] ?? '',
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                ),
+                subtitle: Text(
+                  i['itemdesc'] ?? '',
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                ),
                 trailing: Text(
-                    'RM ${(i['itemprice'] ?? 0).toDouble().toStringAsFixed(2)}'),
+                  'RM ${(i['itemprice'] ?? 0).toDouble().toStringAsFixed(2)}',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             );
           },
@@ -313,17 +376,34 @@ class _HomeState extends State<Home> {
     );
   }
 
-  Widget _boxIcon() => Container(
-    width: 60,
-    height: 60,
-    color: Colors.orange.shade100,
-    child: const Icon(Icons.fastfood, color: Colors.orange),
-  );
+  // icon placeholder
+  Widget _boxIcon() {
+    final theme = Theme.of(context);
 
-  Widget _imgPlaceholder() => Container(
-    height: 100,
-    color: Colors.orange.shade50,
-    child: const Center(
-        child: Icon(Icons.restaurant, color: Colors.orange)),
-  );
+    return Container(
+      width: 60,
+      height: 60,
+      color: theme.colorScheme.primaryContainer,
+      child: Icon(
+        Icons.fastfood,
+        color: theme.colorScheme.onPrimaryContainer,
+      ),
+    );
+  }
+
+  // image placeholder
+  Widget _imgPlaceholder() {
+    final theme = Theme.of(context);
+
+    return Container(
+      height: 100,
+      color: theme.colorScheme.surfaceContainerHighest,
+      child: Center(
+        child: Icon(
+          Icons.restaurant,
+          color: theme.colorScheme.primary,
+        ),
+      ),
+    );
+  }
 }

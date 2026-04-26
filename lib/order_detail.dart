@@ -45,10 +45,15 @@ class _OrderDetailState extends State<OrderDetail> {
     return Scaffold(
       appBar: AppBar(
         title: Text("Order #${widget.orderId}"),
-        backgroundColor: Colors.orange,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+        child: CircularProgressIndicator(
+          color: Theme.of(context).colorScheme.primary,
+        ),
+      )
           : items.isEmpty
           ? const Center(child: Text("No items found"))
           : ListView.builder(
