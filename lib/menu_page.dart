@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'services/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MenuPage extends StatefulWidget {
   final dynamic restaurantId;
@@ -36,8 +37,8 @@ class _MenuPageState extends State<MenuPage> {
 
       // Filter items for this restaurant
       final restaurantItems = allItems
-          .where((item) => item['restaurant_id'] == widget.restaurantId)
-          .where((item) => item['is_available'] != false) // Only show available items
+          .where((item) => item['resid'] == widget.restaurantId || item['restaurant_id'] == widget.restaurantId)
+          .where((item) => item['availability'] != false && item['is_available'] != false)
           .toList();
 
       setState(() {
@@ -54,7 +55,7 @@ class _MenuPageState extends State<MenuPage> {
 
   void _extractCategories() {
     final categories = _menuItems
-        .map((item) => item['category']?.toString() ?? 'General')
+        .map((item) => item['categoryname']?.toString() ?? item['category']?.toString() ?? 'General')
         .toSet()
         .toList();
     categories.sort();
@@ -65,8 +66,8 @@ class _MenuPageState extends State<MenuPage> {
     setState(() {
       _searchQuery = query;
       _filteredItems = _menuItems.where((item) {
-        final name = item['name']?.toLowerCase() ?? '';
-        final description = item['description']?.toLowerCase() ?? '';
+        final name = (item['itemname'] ?? item['name'] ?? '').toLowerCase();
+        final description = (item['itemdesc'] ?? item['description'] ?? '').toLowerCase();
         return name.contains(query.toLowerCase()) ||
             description.contains(query.toLowerCase());
       }).toList();
@@ -80,21 +81,88 @@ class _MenuPageState extends State<MenuPage> {
         _filteredItems = _menuItems;
       } else {
         _filteredItems = _menuItems
-            .where((item) => (item['category'] ?? 'General') == category)
+            .where((item) => (item['categoryname'] ?? item['category'] ?? 'General') == category)
             .toList();
       }
     });
   }
 
-  void _addToCart(Map<String, dynamic> item) {
-    // TODO: Integrate with your cart system
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Added ${item['name']} to cart'),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 1),
-      ),
-    );
+  // UPDATED: Fully Integrated Supabase Cart Logic
+  Future<void> _addToCart(Map<String, dynamic> item) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user == null) {
+        _showError('Please log in to add items to your cart.');
+        return;
+      }
+
+      // Show immediate feedback to user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Adding ${item['itemname'] ?? item['name']} to cart...'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+
+      // 1. Get or create active cart
+      var cartResponse = await supabase
+          .from('cart')
+          .select()
+          .eq('userid', user.id)
+          .eq('status', 'active')
+          .maybeSingle();
+
+      String cartId;
+      if (cartResponse == null) {
+        final newCart = await supabase
+            .from('cart')
+            .insert({'userid': user.id, 'status': 'active', 'subtotal': 0})
+            .select()
+            .single();
+        cartId = newCart['cartid'];
+      } else {
+        cartId = cartResponse['cartid'];
+      }
+
+      // Get appropriate Item ID based on schema
+      final itemId = item['itemid'] ?? item['id'];
+
+      // 2. Check if item already exists in cart
+      var existingItem = await supabase
+          .from('cart_item')
+          .select()
+          .eq('cartid', cartId)
+          .eq('itemid', itemId)
+          .maybeSingle();
+
+      if (existingItem != null) {
+        // Update existing quantity
+        await supabase.from('cart_item').update({
+          'quantity': existingItem['quantity'] + 1,
+        }).eq('cartitemid', existingItem['cartitemid']);
+      } else {
+        // Insert new cart item (Removed 'price' to match schema)
+        await supabase.from('cart_item').insert({
+          'cartid': cartId,
+          'itemid': itemId,
+          'quantity': 1,
+        });
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${item['itemname'] ?? item['name']} added successfully!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) _showError('Failed to add to cart: $e');
+    }
   }
 
   @override
@@ -265,7 +333,7 @@ class _MenuPageState extends State<MenuPage> {
                     children: [
                       Expanded(
                         child: Text(
-                          item['name'] ?? 'Menu Item',
+                          item['itemname'] ?? item['name'] ?? 'Menu Item',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -274,7 +342,7 @@ class _MenuPageState extends State<MenuPage> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (item['category'] != null)
+                      if (item['categoryname'] != null || item['category'] != null)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
@@ -282,7 +350,7 @@ class _MenuPageState extends State<MenuPage> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            item['category'],
+                            item['categoryname'] ?? item['category'],
                             style: TextStyle(
                               fontSize: 10,
                               color: Colors.orange[700],
@@ -295,9 +363,9 @@ class _MenuPageState extends State<MenuPage> {
                   const SizedBox(height: 4),
 
                   // Description
-                  if (item['description'] != null && item['description'].toString().isNotEmpty)
+                  if ((item['itemdesc'] ?? item['description']) != null && (item['itemdesc'] ?? item['description']).toString().isNotEmpty)
                     Text(
-                      item['description'],
+                      item['itemdesc'] ?? item['description'],
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey[600],
@@ -315,14 +383,14 @@ class _MenuPageState extends State<MenuPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '₱${item['price']?.toString() ?? '0'}',
+                            '₱${(item['itemprice'] ?? item['price'])?.toString() ?? '0'}',
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
                               color: Colors.orange,
                             ),
                           ),
-                          if (item['is_available'] == false)
+                          if (item['availability'] == false || item['is_available'] == false)
                             Text(
                               'Currently unavailable',
                               style: TextStyle(
@@ -333,7 +401,7 @@ class _MenuPageState extends State<MenuPage> {
                         ],
                       ),
                       ElevatedButton.icon(
-                        onPressed: item['is_available'] != false
+                        onPressed: (item['availability'] != false && item['is_available'] != false)
                             ? () => _addToCart(item)
                             : null,
                         style: ElevatedButton.styleFrom(
