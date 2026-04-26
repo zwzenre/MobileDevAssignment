@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'services/supabase_service.dart';
 
-
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
 
@@ -30,11 +29,11 @@ class _SignupPageState extends State<SignupPage> {
         const SnackBar(content: Text("Signup successful! Please login.")),
       );
 
-      Navigator.pop(context); // go back to login
+      Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
     }
 
     setState(() => isLoading = false);
@@ -42,44 +41,50 @@ class _SignupPageState extends State<SignupPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F5F2),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: IconThemeData(
+          color: theme.textTheme.bodyLarge?.color,
+        ),
       ),
       body: SingleChildScrollView(
         child: Column(
           children: [
             const SizedBox(height: 20),
 
-            // 🍽 ICON
+            // icon
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.orange[100],
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.person_add,
                 size: 50,
-                color: Colors.orange,
+                color: theme.colorScheme.primary,
               ),
             ),
 
             const SizedBox(height: 20),
 
-            const Text(
+            Text(
               "Create Account",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
 
             const SizedBox(height: 5),
 
-            const Text(
+            Text(
               "Sign up to get started",
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: theme.hintColor),
             ),
 
             const SizedBox(height: 30),
@@ -88,14 +93,17 @@ class _SignupPageState extends State<SignupPage> {
               padding: const EdgeInsets.symmetric(horizontal: 25),
               child: Column(
                 children: [
-                  // EMAIL
+                  // email
                   TextField(
                     controller: emailController,
                     decoration: InputDecoration(
                       hintText: "Email",
-                      prefixIcon: const Icon(Icons.email),
+                      prefixIcon: Icon(
+                        Icons.email,
+                        color: theme.colorScheme.primary,
+                      ),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: theme.cardColor,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(15),
                         borderSide: BorderSide.none,
@@ -105,15 +113,18 @@ class _SignupPageState extends State<SignupPage> {
 
                   const SizedBox(height: 15),
 
-                  // PASSWORD
+                  // password
                   TextField(
                     controller: passwordController,
                     obscureText: true,
                     decoration: InputDecoration(
                       hintText: "Password",
-                      prefixIcon: const Icon(Icons.lock),
+                      prefixIcon: Icon(
+                        Icons.lock,
+                        color: theme.colorScheme.primary,
+                      ),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: theme.cardColor,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(15),
                         borderSide: BorderSide.none,
@@ -123,34 +134,42 @@ class _SignupPageState extends State<SignupPage> {
 
                   const SizedBox(height: 25),
 
-                  // SIGNUP BUTTON
+                  // signup button
                   ElevatedButton(
                     onPressed: isLoading ? null : signup,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: theme.colorScheme.onPrimary,
                       minimumSize: const Size(double.infinity, 55),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15),
                       ),
                     ),
                     child: isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
+                        ? CircularProgressIndicator(
+                      color: theme.colorScheme.onPrimary,
+                    )
                         : const Text("Sign Up"),
                   ),
 
                   const SizedBox(height: 20),
 
-                  // LOGIN LINK
+                  // login link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text("Already have an account? "),
+                      Text(
+                        "Already have an account? ",
+                        style: TextStyle(
+                          color: theme.textTheme.bodyMedium?.color,
+                        ),
+                      ),
                       GestureDetector(
                         onTap: () => Navigator.pop(context),
-                        child: const Text(
+                        child: Text(
                           "Login",
                           style: TextStyle(
-                            color: Colors.orange,
+                            color: theme.colorScheme.primary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),

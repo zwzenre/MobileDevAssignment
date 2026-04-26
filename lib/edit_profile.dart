@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-
 class EditProfile extends StatefulWidget {
   const EditProfile({super.key});
 
@@ -21,27 +20,34 @@ class _EditProfileState extends State<EditProfile> {
   @override
   void initState() {
     super.initState();
-    loadUser(); // load existing data
+    loadUser();
   }
 
   Future<void> loadUser() async {
-    final user = supabase.auth.currentUser;
+    try {
+      final user = supabase.auth.currentUser;
 
-    if (user != null) {
-      final data = await supabase
-          .from('User')
-          .select()
-          .eq('userid', user.id)
-          .maybeSingle();
+      if (user != null) {
+        final data = await supabase
+            .from('User')
+            .select()
+            .eq('userid', user.id)
+            .maybeSingle();
 
-      if (data != null) {
-        usernameController.text = data['username'] ?? '';
-        phoneController.text = data['phone'] ?? '';
-        addressController.text = data['address'] ?? '';
+        if (data != null) {
+          usernameController.text = data['username'] ?? '';
+          phoneController.text = data['phone'] ?? '';
+          addressController.text = data['address'] ?? '';
+        }
       }
+    } catch (e) {
+      print("loadUser error: $e");
     }
 
-    setState(() => isLoading = false);
+    // always stop loading no matter what
+    if (mounted) {
+      setState(() => isLoading = false);
+    }
   }
 
   Future<void> saveProfile() async {
@@ -59,41 +65,71 @@ class _EditProfileState extends State<EditProfile> {
       const SnackBar(content: Text("Profile updated")),
     );
 
-    Navigator.pop(context); // go back
+    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F5F2),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text("Edit Profile"),
-        backgroundColor: Colors.orange,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+        child: CircularProgressIndicator(
+          color: theme.colorScheme.primary,
+        ),
+      )
           : Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-
             TextField(
               controller: usernameController,
-              decoration: const InputDecoration(labelText: "Username"),
+              decoration: InputDecoration(
+                labelText: "Username",
+                filled: true,
+                fillColor: theme.cardColor,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
             ),
 
             const SizedBox(height: 15),
 
             TextField(
               controller: phoneController,
-              decoration: const InputDecoration(labelText: "Phone"),
+              decoration: InputDecoration(
+                labelText: "Phone",
+                filled: true,
+                fillColor: theme.cardColor,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
             ),
 
             const SizedBox(height: 15),
 
             TextField(
               controller: addressController,
-              decoration: const InputDecoration(labelText: "Address"),
+              decoration: InputDecoration(
+                labelText: "Address",
+                filled: true,
+                fillColor: theme.cardColor,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
             ),
 
             const SizedBox(height: 30),
@@ -101,8 +137,12 @@ class _EditProfileState extends State<EditProfile> {
             ElevatedButton(
               onPressed: saveProfile,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary,
                 minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
               ),
               child: const Text("Save"),
             ),

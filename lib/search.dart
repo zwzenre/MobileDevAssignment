@@ -28,7 +28,6 @@ class _SearchPageState extends State<SearchPage> {
     fetchData();
   }
 
-  // fetch data
   Future<void> fetchData() async {
     try {
       final itemData = await supabase.from('item').select();
@@ -45,7 +44,7 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
-  // filter logic
+  // safer filter
   List get filteredItems {
     return items.where((item) {
       final name = item['itemname']?.toLowerCase() ?? '';
@@ -53,16 +52,14 @@ class _SearchPageState extends State<SearchPage> {
 
       final matchesSearch = name.contains(searchText.toLowerCase());
 
-      if (selectedCategory == "All") {
-        return matchesSearch;
-      }
+      if (selectedCategory == "All") return matchesSearch;
 
-      final category = categories.firstWhere(
+      final category = categories.where(
             (c) => c['categoryid'] == categoryId,
-        orElse: () => null,
-      );
+      ).toList();
 
-      final categoryName = category?['categoryname'] ?? '';
+      final categoryName =
+      category.isNotEmpty ? category.first['categoryname'] : '';
 
       return matchesSearch && categoryName == selectedCategory;
     }).toList();
@@ -70,14 +67,20 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Search"),
-        backgroundColor: Colors.orange,
-        foregroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+        child: CircularProgressIndicator(
+          color: theme.colorScheme.primary,
+        ),
+      )
           : Column(
         children: [
           // search bar
@@ -93,8 +96,11 @@ class _SearchPageState extends State<SearchPage> {
               decoration: InputDecoration(
                 hintText: "Search food...",
                 prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: theme.cardColor,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide.none,
                 ),
               ),
             ),
@@ -117,11 +123,14 @@ class _SearchPageState extends State<SearchPage> {
 
           const SizedBox(height: 10),
 
-          // item list
+          // items
           Expanded(
             child: filteredItems.isEmpty
-                ? const Center(
-              child: Text("No items found"),
+                ? Center(
+              child: Text(
+                "No items found",
+                style: TextStyle(color: theme.hintColor),
+              ),
             )
                 : ListView.builder(
               padding: const EdgeInsets.all(12),
@@ -137,8 +146,9 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  // category chip
+  // chip
   Widget _buildCategoryChip(String name) {
+    final theme = Theme.of(context);
     final isSelected = selectedCategory == name;
 
     return Padding(
@@ -146,7 +156,13 @@ class _SearchPageState extends State<SearchPage> {
       child: ChoiceChip(
         label: Text(name),
         selected: isSelected,
-        selectedColor: Colors.orange,
+        selectedColor: theme.colorScheme.primary,
+        backgroundColor: theme.cardColor,
+        labelStyle: TextStyle(
+          color: isSelected
+              ? theme.colorScheme.onPrimary
+              : theme.textTheme.bodyMedium?.color,
+        ),
         onSelected: (_) {
           setState(() {
             selectedCategory = name;
@@ -158,6 +174,8 @@ class _SearchPageState extends State<SearchPage> {
 
   // item card
   Widget _buildItemCard(Map item) {
+    final theme = Theme.of(context);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
@@ -171,9 +189,12 @@ class _SearchPageState extends State<SearchPage> {
           placeholder: (_, __) => Container(
             width: 60,
             height: 60,
-            color: Colors.orange.shade100,
-            child: const Center(
-              child: CircularProgressIndicator(strokeWidth: 2),
+            color: theme.colorScheme.primary.withValues(alpha: 0.1),
+            child: Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: theme.colorScheme.primary,
+              ),
             ),
           ),
           errorWidget: (_, __, ___) => _placeholder(),
@@ -189,11 +210,16 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   Widget _placeholder() {
+    final theme = Theme.of(context);
+
     return Container(
       width: 60,
       height: 60,
-      color: Colors.orange.shade100,
-      child: const Icon(Icons.fastfood, color: Colors.orange),
+      color: theme.colorScheme.primary.withValues(alpha: 0.1),
+      child: Icon(
+        Icons.fastfood,
+        color: theme.colorScheme.primary,
+      ),
     );
   }
 }

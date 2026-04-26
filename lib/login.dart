@@ -3,7 +3,6 @@ import 'main.dart';
 import 'services/supabase_service.dart';
 import 'signup.dart';
 
-
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -21,9 +20,9 @@ class _LoginPageState extends State<LoginPage> {
 
   void login() async {
     if (emailController.text.isEmpty || passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Please fill all fields")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill all fields")),
+      );
       return;
     }
 
@@ -40,9 +39,9 @@ class _LoginPageState extends State<LoginPage> {
         MaterialPageRoute(builder: (_) => const AuthGate()),
       );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
     }
 
     setState(() => isLoading = false);
@@ -50,8 +49,10 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F5F2),
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -61,28 +62,30 @@ class _LoginPageState extends State<LoginPage> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.orange[100],
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.restaurant,
                 size: 50,
-                color: Colors.orange,
+                color: theme.colorScheme.primary,
               ),
             ),
 
             const SizedBox(height: 20),
 
-            const Text(
+            Text(
               "Welcome Back",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
 
             const SizedBox(height: 5),
 
-            const Text(
+            Text(
               "Login to continue",
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: theme.hintColor),
             ),
 
             const SizedBox(height: 40),
@@ -96,10 +99,12 @@ class _LoginPageState extends State<LoginPage> {
                     controller: emailController,
                     decoration: InputDecoration(
                       hintText: "Email",
-                      prefixIcon: const Icon(Icons.email),
+                      prefixIcon: Icon(Icons.email,
+                          color: theme.colorScheme.primary),
                       filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 18),
+                      fillColor: theme.cardColor,
+                      contentPadding:
+                      const EdgeInsets.symmetric(vertical: 18),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(15),
                         borderSide: BorderSide.none,
@@ -115,10 +120,12 @@ class _LoginPageState extends State<LoginPage> {
                     obscureText: true,
                     decoration: InputDecoration(
                       hintText: "Password",
-                      prefixIcon: const Icon(Icons.lock),
+                      prefixIcon: Icon(Icons.lock,
+                          color: theme.colorScheme.primary),
                       filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 18),
+                      fillColor: theme.cardColor,
+                      contentPadding:
+                      const EdgeInsets.symmetric(vertical: 18),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(15),
                         borderSide: BorderSide.none,
@@ -132,14 +139,17 @@ class _LoginPageState extends State<LoginPage> {
                   ElevatedButton(
                     onPressed: isLoading ? null : login,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: theme.colorScheme.onPrimary,
                       minimumSize: const Size(double.infinity, 55),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15),
                       ),
                     ),
                     child: isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
+                        ? CircularProgressIndicator(
+                      color: theme.colorScheme.onPrimary,
+                    )
                         : const Text("Login", style: TextStyle(fontSize: 16)),
                   ),
 
@@ -149,7 +159,12 @@ class _LoginPageState extends State<LoginPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text("Don't have an account? "),
+                      Text(
+                        "Don't have an account? ",
+                        style: TextStyle(
+                          color: theme.textTheme.bodyMedium?.color,
+                        ),
+                      ),
                       GestureDetector(
                         onTap: () {
                           Navigator.push(
@@ -159,10 +174,10 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           );
                         },
-                        child: const Text(
+                        child: Text(
                           "Register",
                           style: TextStyle(
-                            color: Colors.orange,
+                            color: theme.colorScheme.primary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),

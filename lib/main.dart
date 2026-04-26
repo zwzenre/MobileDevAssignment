@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
-
 import 'login.dart';
 import 'theme_provider.dart';
 import 'main_navigation.dart';
@@ -27,22 +26,19 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
 
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
+          themeMode: themeProvider.themeMode,
 
-      // 🔥 THIS IS THE IMPORTANT PART
-      themeMode: themeProvider.isDark ? ThemeMode.dark : ThemeMode.light,
+          theme: themeProvider.lightTheme,
+          darkTheme: themeProvider.darkTheme,
 
-      theme: ThemeData(
-        primarySwatch: Colors.orange,
-        scaffoldBackgroundColor: Colors.white,
-      ),
-
-      darkTheme: ThemeData.dark(),
-
-      home: const AuthGate(),
+          home: const AuthGate(),
+        );
+      },
     );
   }
 }

@@ -89,11 +89,13 @@ class _AllRestaurantsPageState extends State<AllRestaurantsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.categoryName),
-        backgroundColor: Colors.orange,
-        foregroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Padding(
@@ -113,8 +115,8 @@ class _AllRestaurantsPageState extends State<AllRestaurantsPage> {
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(vertical: 0), // Added to reduce height
+                fillColor: theme.cardColor,
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
               ),
               onChanged: _filterRestaurants,
             ),
@@ -122,33 +124,29 @@ class _AllRestaurantsPageState extends State<AllRestaurantsPage> {
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.orange))
+          ? Center(
+        child: CircularProgressIndicator(
+          color: theme.colorScheme.primary,
+        ),
+      )
           : _filteredRestaurants.isEmpty
           ? Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.restaurant, size: 64, color: Colors.grey[400]),
+            Icon(Icons.restaurant, size: 64, color: theme.disabledColor),
             const SizedBox(height: 16),
             Text(
               _searchQuery.isNotEmpty
                   ? 'No restaurants match "$_searchQuery"'
-                  : 'No restaurants found in this category',
-              style: TextStyle(color: Colors.grey[600]),
+                  : 'No restaurants found',
+              style: TextStyle(color: theme.hintColor),
             ),
-            if (_searchQuery.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () => _filterRestaurants(''),
-                child: const Text('Clear search'),
-              ),
-            ],
           ],
         ),
       )
           : Column(
         children: [
-          // Sort Options
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
@@ -156,7 +154,7 @@ class _AllRestaurantsPageState extends State<AllRestaurantsPage> {
               children: [
                 Text(
                   '${_filteredRestaurants.length} restaurants found',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  style: TextStyle(color: theme.hintColor, fontSize: 12),
                 ),
                 Row(
                   children: [
@@ -166,9 +164,9 @@ class _AllRestaurantsPageState extends State<AllRestaurantsPage> {
                       value: _sortBy,
                       underline: const SizedBox(),
                       items: const [
-                        DropdownMenuItem(value: 'Rating', child: Text('Rating ↓', style: TextStyle(fontSize: 13))),
-                        DropdownMenuItem(value: 'Delivery Time', child: Text('Fastest', style: TextStyle(fontSize: 13))),
-                        DropdownMenuItem(value: 'Price (Low to High)', child: Text('Price ↓', style: TextStyle(fontSize: 13))),
+                        DropdownMenuItem(value: 'Rating', child: Text('Rating ↓')),
+                        DropdownMenuItem(value: 'Delivery Time', child: Text('Fastest')),
+                        DropdownMenuItem(value: 'Price (Low to High)', child: Text('Price ↓')),
                       ],
                       onChanged: (value) {
                         setState(() => _sortBy = value!);
@@ -182,7 +180,7 @@ class _AllRestaurantsPageState extends State<AllRestaurantsPage> {
           ),
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.all(12), // Reduced padding
+              padding: const EdgeInsets.all(12),
               itemCount: _filteredRestaurants.length,
               itemBuilder: (context, index) {
                 final restaurant = _filteredRestaurants[index];
@@ -196,28 +194,28 @@ class _AllRestaurantsPageState extends State<AllRestaurantsPage> {
   }
 
   Widget _buildRestaurantCard(BuildContext context, Map<String, dynamic> restaurant) {
+    final theme = Theme.of(context);
+
     return Card(
-      margin: const EdgeInsets.only(bottom: 12), // Reduced margin
-      elevation: 3, // Reduced elevation
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 3,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12), // Reduced radius
+        borderRadius: BorderRadius.circular(12),
       ),
       child: InkWell(
+        borderRadius: BorderRadius.circular(12),
         onTap: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => RestaurantDetailsPage(
-                restaurant: restaurant,
-              ),
+              builder: (_) => RestaurantDetailsPage(restaurant: restaurant),
             ),
           );
         },
-        borderRadius: BorderRadius.circular(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Restaurant Image
+            // image
             ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
               child: restaurant['image_url'] != null &&
@@ -227,115 +225,37 @@ class _AllRestaurantsPageState extends State<AllRestaurantsPage> {
                 height: 150,
                 width: double.infinity,
                 fit: BoxFit.cover,
-
-                placeholder: (context, _) => const SizedBox(
+                placeholder: (_, __) => SizedBox(
                   height: 150,
-                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                ),
-
-                errorWidget: (_, __, ___) => Container(
-                  height: 150,
-                  color: Colors.orange,
-                  child: const Center(
-                    child: Icon(Icons.restaurant, size: 40, color: Colors.white),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: theme.colorScheme.primary,
+                    ),
                   ),
                 ),
+                errorWidget: (_, __, ___) => _imgPlaceholder(context),
               )
-                  : Container(
-                height: 150,
-                color: Colors.orange[100],
-                child: const Center(
-                  child: Icon(Icons.restaurant, size: 40, color: Colors.orange),
-                ),
-              ),
+                  : _imgPlaceholder(context),
             ),
 
-            // Restaurant Info
+            // info
             Padding(
-              padding: const EdgeInsets.all(10), // Reduced padding
+              padding: const EdgeInsets.all(10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          restaurant['resname'] ?? 'Unknown',
-                          style: const TextStyle(
-                            fontSize: 16, // Reduced from 18
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (restaurant['rating'] != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), // Reduced padding
-                          decoration: BoxDecoration(
-                            color: Colors.orange,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.star, size: 12, color: Colors.white),
-                              const SizedBox(width: 2),
-                              Text(
-                                restaurant['rating'].toString(),
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
+                  Text(
+                    restaurant['resname'] ?? '',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
 
                   const SizedBox(height: 6),
 
-                  if (restaurant['description'] != null && restaurant['description'].toString().isNotEmpty)
-                    Text(
-                      restaurant['description'],
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                      maxLines: 1, // Reduced from 2
-                      overflow: TextOverflow.ellipsis,
-                    ),
-
-                  const SizedBox(height: 6),
-
-                  Row(
-                    children: [
-                      if (restaurant['delivery_time'] != null) ...[
-                        Icon(Icons.access_time, size: 14, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text('${restaurant['delivery_time']} min', style: const TextStyle(fontSize: 12)),
-                        const SizedBox(width: 12),
-                      ],
-
-                      if (restaurant['delivery_fee'] != null) ...[
-                        Icon(Icons.motorcycle, size: 14, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text('₱${restaurant['delivery_fee']}', style: const TextStyle(fontSize: 12)),
-                        const SizedBox(width: 12),
-                      ],
-
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: (restaurant['is_open'] ?? true) ? Colors.green[100] : Colors.red[100],
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          (restaurant['is_open'] ?? true) ? 'Open' : 'Closed',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: (restaurant['is_open'] ?? true) ? Colors.green[800] : Colors.red[800],
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
+                  Text(
+                    restaurant['description'] ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: theme.hintColor),
                   ),
                 ],
               ),
@@ -346,12 +266,26 @@ class _AllRestaurantsPageState extends State<AllRestaurantsPage> {
     );
   }
 
+  Widget _imgPlaceholder(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      height: 150,
+      color: theme.colorScheme.primary.withValues(alpha: 0.1),
+      child: Icon(
+        Icons.restaurant,
+        color: theme.colorScheme.primary,
+      ),
+    );
+  }
+
   void _showError(String message) {
+    final theme = Theme.of(context);
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
+        backgroundColor: theme.colorScheme.error,
       ),
     );
   }
