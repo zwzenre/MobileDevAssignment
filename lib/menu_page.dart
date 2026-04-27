@@ -254,7 +254,7 @@ class _MenuPageState extends State<MenuPage> {
     );
   }
 
-  Widget _buildItem(Map item) {
+  Widget _buildItem(Map<String, dynamic> item) {
     final primary = Theme.of(context).colorScheme.primary;
 
     return Card(
@@ -349,16 +349,15 @@ class _MenuPageState extends State<MenuPage> {
                             ),
                         ],
                       ),
-
                       ElevatedButton.icon(
                         onPressed: (item['availability'] != false && item['is_available'] != false)
-                            ? () => _addToCart(Map<String, dynamic>.from(item))
+                            ? () => _addToCart(item)
                             : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primary,
                         ),
-                        icon: const Icon(Icons.add_shopping_cart, size: 18),  // Add icon
-                        label: const Text('Add'),  // Use 'label' instead of 'child'
+                        icon: const Icon(Icons.add),
+                        label: const Text('add'),
                       ),
                     ],
                   ),

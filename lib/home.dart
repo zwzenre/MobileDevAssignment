@@ -5,6 +5,7 @@ import 'search.dart';
 import 'all_categories.dart';
 import 'all_restaurants.dart';
 import 'all_items.dart';
+import 'restaurant_details_page.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -35,8 +36,8 @@ class _HomeState extends State<Home> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Food App"),
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        foregroundColor: theme.colorScheme.onPrimary,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -61,7 +62,6 @@ class _HomeState extends State<Home> {
     );
   }
 
-  // search bar
   Widget _buildSearchBar() {
     final theme = Theme.of(context);
 
@@ -93,7 +93,6 @@ class _HomeState extends State<Home> {
     );
   }
 
-  // banner
   Widget _buildBanner() {
     final theme = Theme.of(context);
 
@@ -129,7 +128,6 @@ class _HomeState extends State<Home> {
     );
   }
 
-  // section header
   Widget _buildSectionHeader(String title, Widget page) {
     final theme = Theme.of(context);
 
@@ -161,17 +159,19 @@ class _HomeState extends State<Home> {
     );
   }
 
-  // categories
   Widget _buildCategories() {
     return FutureBuilder<List<dynamic>>(
       future: categories,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return SizedBox(
-              height: 100,
-              child: Center(
-                  child: CircularProgressIndicator(
-                      color: Theme.of(context).colorScheme.primary)));
+            height: 100,
+            child: Center(
+              child: CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          );
         }
 
         final data = snapshot.data!;
@@ -213,9 +213,11 @@ class _HomeState extends State<Home> {
                             width: 64,
                             height: 64,
                             child: Center(
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Theme.of(context).colorScheme.primary)),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
                           ),
                           errorWidget: (_, __, ___) => _boxIcon(),
                         )
@@ -240,17 +242,19 @@ class _HomeState extends State<Home> {
     );
   }
 
-  // restaurants
   Widget _buildRestaurants() {
     return FutureBuilder<List<dynamic>>(
       future: restaurants,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return SizedBox(
-              height: 190,
-              child: Center(
-                  child: CircularProgressIndicator(
-                      color: Theme.of(context).colorScheme.primary)));
+            height: 190,
+            child: Center(
+              child: CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          );
         }
 
         final data = snapshot.data!;
@@ -263,43 +267,57 @@ class _HomeState extends State<Home> {
             itemCount: data.length,
             itemBuilder: (context, index) {
               final r = data[index];
-              return Container(
-                width: 180,
-                margin: const EdgeInsets.only(right: 16),
-                child: Card(
-                  color: Theme.of(context).colorScheme.surface,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      r['image_url'] != null && r['image_url'].toString().isNotEmpty
-                          ? CachedNetworkImage(
-                        imageUrl: r['image_url'],
-                        height: 100,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        placeholder: (context, _) => SizedBox(
+
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => RestaurantDetailsPage(
+                        restaurant: r,
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  width: 180,
+                  margin: const EdgeInsets.only(right: 16),
+                  child: Card(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        r['image_url'] != null && r['image_url'].toString().isNotEmpty
+                            ? CachedNetworkImage(
+                          imageUrl: r['image_url'],
                           height: 100,
-                          child: Center(
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          placeholder: (context, _) => SizedBox(
+                            height: 100,
+                            child: Center(
                               child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Theme.of(context).colorScheme.primary)),
-                        ),
-                        errorWidget: (_, __, ___) => _imgPlaceholder(),
-                      )
-                          : _imgPlaceholder(),
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(
-                          r['resname'] ?? '',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
+                                strokeWidth: 2,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
                           ),
-                        ),
-                      )
-                    ],
+                          errorWidget: (_, __, ___) => _imgPlaceholder(),
+                        )
+                            : _imgPlaceholder(),
+                        Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Text(
+                            r['resname'] ?? '',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                        )
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -310,17 +328,19 @@ class _HomeState extends State<Home> {
     );
   }
 
-  // items
   Widget _buildItems() {
     return FutureBuilder<List<dynamic>>(
       future: items,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return Padding(
-              padding: const EdgeInsets.all(16),
-              child: Center(
-                  child: CircularProgressIndicator(
-                      color: Theme.of(context).colorScheme.primary)));
+            padding: const EdgeInsets.all(16),
+            child: Center(
+              child: CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          );
         }
 
         final data = snapshot.data!;
@@ -332,42 +352,49 @@ class _HomeState extends State<Home> {
           itemCount: data.length,
           itemBuilder: (context, index) {
             final i = data[index];
+
             return Card(
-              color: Theme.of(context).colorScheme.surface,
               margin: const EdgeInsets.only(bottom: 12),
               child: ListTile(
-                leading: i['image_url'] != null && i['image_url'].toString().isNotEmpty
+                onTap: () async {
+                  final resList = await restaurants;
+
+                  final restaurant = resList.firstWhere(
+                        (r) =>
+                    r['resid'] == i['resid'] ||
+                        r['id'] == i['restaurant_id'],
+                    orElse: () => null,
+                  );
+
+                  if (restaurant != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => RestaurantDetailsPage(
+                          restaurant: restaurant,
+                        ),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('restaurant not found')),
+                    );
+                  }
+                },
+
+                leading: i['image_url'] != null &&
+                    i['image_url'].toString().isNotEmpty
                     ? CachedNetworkImage(
                   imageUrl: i['image_url'],
                   width: 60,
                   height: 60,
                   fit: BoxFit.cover,
-                  placeholder: (context, _) => SizedBox(
-                    width: 60,
-                    height: 60,
-                    child: Center(
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Theme.of(context).colorScheme.primary)),
-                  ),
                   errorWidget: (_, __, ___) => _boxIcon(),
                 )
                     : _boxIcon(),
-                title: Text(
-                  i['itemname'] ?? '',
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                ),
-                subtitle: Text(
-                  i['itemdesc'] ?? '',
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                ),
-                trailing: Text(
-                  'RM ${(i['itemprice'] ?? 0).toDouble().toStringAsFixed(2)}',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+
+                title: Text(i['itemname'] ?? ''),
+                subtitle: Text(i['itemdesc'] ?? ''),
               ),
             );
           },
@@ -376,7 +403,6 @@ class _HomeState extends State<Home> {
     );
   }
 
-  // icon placeholder
   Widget _boxIcon() {
     final theme = Theme.of(context);
 
@@ -391,7 +417,6 @@ class _HomeState extends State<Home> {
     );
   }
 
-  // image placeholder
   Widget _imgPlaceholder() {
     final theme = Theme.of(context);
 

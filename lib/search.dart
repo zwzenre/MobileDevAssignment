@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'restaurant_details_page.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -28,9 +29,13 @@ class _SearchPageState extends State<SearchPage> {
     fetchData();
   }
 
+  // fetch items with restaurant join
   Future<void> fetchData() async {
     try {
-      final itemData = await supabase.from('item').select();
+      final itemData = await supabase
+          .from('item')
+          .select('*, restaurant(*)');
+
       final categoryData = await supabase.from('category').select();
 
       setState(() {
@@ -39,12 +44,12 @@ class _SearchPageState extends State<SearchPage> {
         isLoading = false;
       });
     } catch (e) {
-      print("Error loading data: $e");
+      debugPrint("Error loading data: $e");
       setState(() => isLoading = false);
     }
   }
 
-  // safer filter
+  // filter items
   List get filteredItems {
     return items.where((item) {
       final name = item['itemname']?.toLowerCase() ?? '';
@@ -123,7 +128,7 @@ class _SearchPageState extends State<SearchPage> {
 
           const SizedBox(height: 10),
 
-          // items
+          // items list
           Expanded(
             child: filteredItems.isEmpty
                 ? Center(
@@ -146,7 +151,7 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  // chip
+  // category chip
   Widget _buildCategoryChip(String name) {
     final theme = Theme.of(context);
     final isSelected = selectedCategory == name;
@@ -172,13 +177,34 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  // item card
+  // item card with navigation to restaurant details
   Widget _buildItemCard(Map item) {
     final theme = Theme.of(context);
+
+    final restaurant = item['restaurant'];
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
+        onTap: () {
+          final restaurant = item['restaurant'];
+
+          if (restaurant == null) return;
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RestaurantDetailsPage(
+                restaurant: {
+                  ...restaurant,
+                  'id': restaurant['resid'],
+                },
+              ),
+            ),
+          );
+        },
+
+        // item image
         leading: item['image_url'] != null &&
             item['image_url'].toString().isNotEmpty
             ? CachedNetworkImage(
@@ -200,8 +226,22 @@ class _SearchPageState extends State<SearchPage> {
           errorWidget: (_, __, ___) => _placeholder(),
         )
             : _placeholder(),
+
         title: Text(item['itemname'] ?? ''),
-        subtitle: Text(item['itemdesc'] ?? ''),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(item['itemdesc'] ?? ''),
+            const SizedBox(height: 4),
+            Text(
+              restaurant?['resname'] ?? '',
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.hintColor,
+              ),
+            ),
+          ],
+        ),
         trailing: Text(
           'RM ${(item['itemprice'] ?? 0).toDouble().toStringAsFixed(2)}',
         ),
@@ -209,6 +249,7 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
+  // fallback image
   Widget _placeholder() {
     final theme = Theme.of(context);
 

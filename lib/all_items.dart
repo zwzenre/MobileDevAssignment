@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'services/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'restaurant_details_page.dart';
 
 class AllItemsPage extends StatefulWidget {
   final dynamic categoryId;
@@ -17,7 +18,7 @@ class AllItemsPage extends StatefulWidget {
 }
 
 class _AllItemsPageState extends State<AllItemsPage> {
-  final SupabaseService _service = SupabaseService();
+  final supabase = Supabase.instance.client;
 
   List<dynamic> _filteredItems = [];
   bool _isLoading = true;
@@ -30,10 +31,14 @@ class _AllItemsPageState extends State<AllItemsPage> {
 
   Future<void> _fetchItems() async {
     try {
-      final allItems = await _service.getItems();
+      // fetch items with restaurant join
+      final allItems = await supabase
+          .from('item')
+          .select('*, restaurant(*)');
 
       List filtered = allItems;
 
+      // filter by category if provided
       if (widget.categoryId != null) {
         filtered = allItems.where((i) {
           return i['categoryid']?.toString() ==
@@ -47,7 +52,7 @@ class _AllItemsPageState extends State<AllItemsPage> {
       });
     } catch (e) {
       setState(() => _isLoading = false);
-      print("Error: $e");
+      debugPrint("Error: $e");
     }
   }
 
@@ -78,11 +83,32 @@ class _AllItemsPageState extends State<AllItemsPage> {
         itemCount: _filteredItems.length,
         itemBuilder: (context, index) {
           final i = _filteredItems[index];
+          final restaurant = i['restaurant'];
 
           return Card(
             color: theme.colorScheme.surface,
             margin: const EdgeInsets.only(bottom: 12),
             child: ListTile(
+              onTap: () {
+                // prevent broken navigation
+                if (restaurant == null) return;
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => RestaurantDetailsPage(
+                      restaurant: {
+                        'id': restaurant['resid'],
+                        'resid': restaurant['resid'],
+                        'resname': restaurant['resname'],
+                        'image_url': restaurant['image_url'],
+                      },
+                    ),
+                  ),
+                );
+              },
+
+              // item image
               leading: i['image_url'] != null &&
                   i['image_url'].toString().isNotEmpty
                   ? CachedNetworkImage(
@@ -109,11 +135,24 @@ class _AllItemsPageState extends State<AllItemsPage> {
                 ),
               ),
 
-              subtitle: Text(
-                i['itemdesc'] ?? '',
-                style: TextStyle(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    i['itemdesc'] ?? '',
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    restaurant?['resname'] ?? '',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.hintColor,
+                    ),
+                  ),
+                ],
               ),
 
               trailing: Text(
