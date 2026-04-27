@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
 import 'package:permission_handler/permission_handler.dart' as handler;
 import 'package:geocoding/geocoding.dart' as geocoding;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class EditAddressPage extends StatefulWidget {
   const EditAddressPage({super.key});
@@ -15,6 +16,7 @@ class EditAddressPage extends StatefulWidget {
 
 class _EditAddressPageState extends State<EditAddressPage> {
   String _selectedTag = 'Home'; // 'Home' or 'Work'
+  bool _isSaving = false; // Tracks saving state for the button
 
   // Map & Location State
   final MapController _mapController = MapController();
@@ -27,7 +29,7 @@ class _EditAddressPageState extends State<EditAddressPage> {
   StreamSubscription<LocationData>? _subscription;
   final Location _location = Location();
 
-  // Text Controllers for Autofill
+  // Text Controllers for Autofill & Saving
   final TextEditingController _buildingCtrl = TextEditingController();
   final TextEditingController _floorCtrl = TextEditingController();
   final TextEditingController _streetCtrl = TextEditingController();
@@ -83,6 +85,37 @@ class _EditAddressPageState extends State<EditAddressPage> {
     if (!await isPermissionGranted()) await requestLocationPermission();
 
     if (await isGpsEnabled() && await isPermissionGranted()) {
+
+      // 1. Immediately fetch current location (fixes issue where device is stationary)
+      try {
+        // Added a timeout in case the emulator's location service is hanging
+        LocationData currentData = await _location.getLocation().timeout(const Duration(seconds: 10));
+        if (currentData.latitude != null && currentData.longitude != null) {
+          if (mounted) {
+            setState(() {
+              _currentLocation = LatLng(currentData.latitude!, currentData.longitude!);
+            });
+            _mapController.move(_currentLocation, 18.0);
+
+            if (!_hasAutofilled) {
+              await _getAddressFromLatLng(currentData.latitude!, currentData.longitude!);
+              _hasAutofilled = true;
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint("Error getting initial location: $e");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to get GPS location. Are you on an emulator without a mock location set?'),
+                backgroundColor: Colors.orange,
+              )
+          );
+        }
+      }
+
+      // 2. Then listen for future movements
       _subscription = _location.onLocationChanged.listen((LocationData data) {
         if (data.latitude != null && data.longitude != null) {
           if (mounted) {
@@ -91,15 +124,11 @@ class _EditAddressPageState extends State<EditAddressPage> {
               _trackingEnabled = true;
             });
             _mapController.move(_currentLocation, 18.0);
-
-            // Autofill fields the first time a location is locked
-            if (!_hasAutofilled) {
-              _getAddressFromLatLng(data.latitude!, data.longitude!);
-              _hasAutofilled = true;
-            }
           }
         }
       });
+
+      if (mounted) setState(() => _trackingEnabled = true);
     }
   }
 
@@ -118,8 +147,14 @@ class _EditAddressPageState extends State<EditAddressPage> {
         if (mounted) {
           setState(() {
             _buildingCtrl.text = place.name ?? '';
-            // Combines street, sub-locality, and locality into one string
-            _streetCtrl.text = '${place.street ?? ''} ${place.subLocality ?? ''} ${place.locality ?? ''}'.trim();
+
+            // Better fallback logic for empty street fields
+            List<String> streetParts = [];
+            if (place.street != null && place.street!.isNotEmpty) streetParts.add(place.street!);
+            if (place.subLocality != null && place.subLocality!.isNotEmpty) streetParts.add(place.subLocality!);
+            if (place.locality != null && place.locality!.isNotEmpty) streetParts.add(place.locality!);
+
+            _streetCtrl.text = streetParts.join(', ');
             _postalCtrl.text = place.postalCode ?? '';
             _stateCtrl.text = place.administrativeArea ?? '';
           });
@@ -135,6 +170,65 @@ class _EditAddressPageState extends State<EditAddressPage> {
       }
     } catch (e) {
       debugPrint("Error reverse geocoding: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Autofill failed. Check internet/Play Services. $e'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            )
+        );
+      }
+    }
+  }
+
+  // --- SAVE TO SUPABASE ---
+  Future<void> _saveAddress() async {
+    setState(() => _isSaving = true);
+    try {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user != null) {
+        // Construct a clean, single string address
+        final addressParts = [
+          if (_buildingCtrl.text.isNotEmpty) _buildingCtrl.text,
+          if (_floorCtrl.text.isNotEmpty) 'Unit ${_floorCtrl.text}',
+          if (_streetCtrl.text.isNotEmpty) _streetCtrl.text,
+          if (_postalCtrl.text.isNotEmpty || _stateCtrl.text.isNotEmpty)
+            '${_postalCtrl.text} ${_stateCtrl.text}'.trim(),
+        ];
+
+        final fullAddress = addressParts.join(', ');
+
+        await supabase
+            .from('user')
+            .update({'address': fullAddress})
+            .eq('userid', user.id);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Address saved successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pop(context);
+        }
+      } else {
+        throw Exception('User is not logged in.');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save address: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -154,7 +248,7 @@ class _EditAddressPageState extends State<EditAddressPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Map View with OpenStreetMap
+            // Map View reverted back to OpenStreetMap
             SizedBox(
               height: 220,
               child: Stack(
@@ -168,9 +262,10 @@ class _EditAddressPageState extends State<EditAddressPage> {
                     children: [
                       TileLayer(
                         maxZoom: 20,
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        // Make sure to use a unique name, not 'example'
-                        userAgentPackageName: 'com.mycustomname.fooddeliveryapp',
+                        // Fix: Added "a." subdomain to bypass Flutter's corrupted image cache!
+                        urlTemplate: 'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        // Avoid using the word "example" in this string
+                        userAgentPackageName: 'com.student.fooddeliveryapp',
                       ),
                       MarkerLayer(
                         markers: [
@@ -254,15 +349,11 @@ class _EditAddressPageState extends State<EditAddressPage> {
 
                     const SizedBox(height: 32),
 
-                    // Actions (Consistent Pill Buttons)
+                    // Actions
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
-                          // TODO: Save to Supabase user table here
-                          // Example: final fullAddress = '${_buildingCtrl.text}, ${_streetCtrl.text}, ${_postalCtrl.text} ${_stateCtrl.text}';
-                          Navigator.pop(context);
-                        },
+                        onPressed: _isSaving ? null : _saveAddress,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange,
                           foregroundColor: Colors.white,
@@ -270,14 +361,20 @@ class _EditAddressPageState extends State<EditAddressPage> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                           elevation: 0,
                         ),
-                        child: const Text('Save Address', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        child: _isSaving
+                            ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                            : const Text('Save Address', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       ),
                     ),
                     const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: _isSaving ? null : () => Navigator.pop(context),
                         style: OutlinedButton.styleFrom(
                           side: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
                           padding: const EdgeInsets.symmetric(vertical: 16),
