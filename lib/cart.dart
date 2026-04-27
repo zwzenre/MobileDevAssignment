@@ -13,7 +13,6 @@ class Cart extends StatefulWidget {
 class _CartState extends State<Cart> {
   List<dynamic> _cartItems = [];
   bool _isLoading = true;
-  final double deliveryFee = 5.00;
 
   @override
   void initState() {
@@ -40,9 +39,10 @@ class _CartState extends State<Cart> {
           .maybeSingle();
 
       if (cartResponse != null) {
+        // Deep join: Fetch cart_item -> item -> restaurant
         final itemsResponse = await supabase
             .from('cart_item')
-            .select('*, item(*)')
+            .select('*, item(*, restaurant(*))')
             .eq('cartid', cartResponse['cartid']);
 
         setState(() {
@@ -74,12 +74,7 @@ class _CartState extends State<Cart> {
             .update({'quantity': newQty})
             .eq('cartitemid', cartItemId);
       }
-
-      await _fetchCartItems();
-
-      if (mounted && _cartItems.isEmpty) {
-        Navigator.pop(context);
-      }
+      _fetchCartItems(); // Refresh the cart
     } catch (e) {
       debugPrint('Error updating quantity: $e');
     }
@@ -95,6 +90,14 @@ class _CartState extends State<Cart> {
     return total;
   }
 
+  // Dynamically fetch delivery fee from the restaurant associated with the first item
+  double get deliveryFee {
+    if (_cartItems.isEmpty) return 0.0;
+    final itemData = _cartItems.first['item'] ?? {};
+    final restaurantData = itemData['restaurant'] ?? {};
+    return num.tryParse((restaurantData['delivery_fee'] ?? 0).toString())?.toDouble() ?? 0.0;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -103,7 +106,7 @@ class _CartState extends State<Cart> {
       appBar: AppBar(
         title: const Text('My Cart', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: theme.colorScheme.primary,
-        foregroundColor: theme.colorScheme.onPrimary,
+        foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
       ),
@@ -116,15 +119,14 @@ class _CartState extends State<Cart> {
         itemCount: _cartItems.length,
         itemBuilder: (context, index) {
           final item = _cartItems[index];
-          return _buildCartItemCard(item);
+          return _buildCartItemCard(item, theme);
         },
       ),
-      bottomNavigationBar: _buildBottomSummary(),
+      bottomNavigationBar: _buildBottomSummary(theme),
     );
   }
 
-  Widget _buildCartItemCard(Map<String, dynamic> cartItem) {
-    final theme = Theme.of(context);
+  Widget _buildCartItemCard(Map<String, dynamic> cartItem, ThemeData theme) {
     final itemData = cartItem['item'] ?? {};
     final price = num.tryParse((itemData['itemprice'] ?? 0).toString())?.toDouble() ?? 0.0;
 
@@ -136,24 +138,25 @@ class _CartState extends State<Cart> {
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
+            // Item Image
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: Container(
                 width: 70,
                 height: 70,
-                color: theme.colorScheme.primaryContainer,
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
                 child: itemData['image_url'] != null && itemData['image_url'].toString().isNotEmpty
                     ? CachedNetworkImage(
                   imageUrl: itemData['image_url'],
                   fit: BoxFit.cover,
-                  errorWidget: (context, url, error) =>
-                      Icon(Icons.fastfood, color: theme.colorScheme.primary),
+                  errorWidget: (context, url, error) => Icon(Icons.fastfood, color: theme.colorScheme.primary),
                 )
                     : Icon(Icons.fastfood, color: theme.colorScheme.primary),
               ),
             ),
             const SizedBox(width: 16),
 
+            // Details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -165,15 +168,13 @@ class _CartState extends State<Cart> {
                   const SizedBox(height: 8),
                   Text(
                     'RM ${price.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
             ),
 
+            // Quantity controls
             Row(
               children: [
                 IconButton(
@@ -193,9 +194,7 @@ class _CartState extends State<Cart> {
     );
   }
 
-  Widget _buildBottomSummary() {
-    final theme = Theme.of(context);
-
+  Widget _buildBottomSummary(ThemeData theme) {
     if (_cartItems.isEmpty || _isLoading) return const SizedBox.shrink();
 
     return Container(
@@ -219,8 +218,7 @@ class _CartState extends State<Cart> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Subtotal', style: TextStyle(color: Colors.grey)),
-                Text('RM ${subtotal.toStringAsFixed(2)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text('RM ${subtotal.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 8),
@@ -228,8 +226,7 @@ class _CartState extends State<Cart> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Delivery Fee', style: TextStyle(color: Colors.grey)),
-                Text('RM ${deliveryFee.toStringAsFixed(2)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text('RM ${deliveryFee.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
               ],
             ),
             const Padding(
@@ -239,40 +236,34 @@ class _CartState extends State<Cart> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Total',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text('Total', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 Text(
                   'RM ${(subtotal + deliveryFee).toStringAsFixed(2)}',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
-                  ),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                 ),
               ],
             ),
             const SizedBox(height: 20),
 
+            // Checkout Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
                   Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const Payment()));
+                      MaterialPageRoute(builder: (_) => const Payment())
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: theme.colorScheme.onPrimary,
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
                   ),
                 ),
-                child: const Text(
-                  'Proceed to Checkout',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                child: const Text('Proceed to Checkout', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
             ),
           ],

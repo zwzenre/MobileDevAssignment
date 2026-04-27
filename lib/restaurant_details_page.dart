@@ -497,8 +497,6 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
           'userid': user.id,
           'status': 'active',
           'subtotal': 0,
-          'delivery_fee': deliveryFee,
-          'restaurant_id': restaurantId,
         }).select().single();
 
         cartId = newCart['cartid'];

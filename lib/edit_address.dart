@@ -4,6 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
 import 'package:permission_handler/permission_handler.dart' as handler;
+import 'package:geocoding/geocoding.dart' as geocoding;
 
 class EditAddressPage extends StatefulWidget {
   const EditAddressPage({super.key});
@@ -22,8 +23,17 @@ class _EditAddressPageState extends State<EditAddressPage> {
   bool _permissionGranted = false;
   bool _gpsEnabled = false;
   bool _trackingEnabled = false;
+  bool _hasAutofilled = false; // Tracks if we already autofilled to prevent overriding user edits
   StreamSubscription<LocationData>? _subscription;
   final Location _location = Location();
+
+  // Text Controllers for Autofill
+  final TextEditingController _buildingCtrl = TextEditingController();
+  final TextEditingController _floorCtrl = TextEditingController();
+  final TextEditingController _streetCtrl = TextEditingController();
+  final TextEditingController _postalCtrl = TextEditingController();
+  final TextEditingController _stateCtrl = TextEditingController();
+  final TextEditingController _instructionCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -38,6 +48,12 @@ class _EditAddressPageState extends State<EditAddressPage> {
   @override
   void dispose() {
     stopTracking();
+    _buildingCtrl.dispose();
+    _floorCtrl.dispose();
+    _streetCtrl.dispose();
+    _postalCtrl.dispose();
+    _stateCtrl.dispose();
+    _instructionCtrl.dispose();
     super.dispose();
   }
 
@@ -75,6 +91,12 @@ class _EditAddressPageState extends State<EditAddressPage> {
               _trackingEnabled = true;
             });
             _mapController.move(_currentLocation, 18.0);
+
+            // Autofill fields the first time a location is locked
+            if (!_hasAutofilled) {
+              _getAddressFromLatLng(data.latitude!, data.longitude!);
+              _hasAutofilled = true;
+            }
           }
         }
       });
@@ -84,6 +106,36 @@ class _EditAddressPageState extends State<EditAddressPage> {
   void stopTracking() {
     _subscription?.cancel();
     if (mounted) setState(() => _trackingEnabled = false);
+  }
+
+  // --- REVERSE GEOCODING FOR AUTOFILL ---
+  Future<void> _getAddressFromLatLng(double lat, double lng) async {
+    try {
+      List<geocoding.Placemark> placemarks = await geocoding.placemarkFromCoordinates(lat, lng);
+      if (placemarks.isNotEmpty) {
+        geocoding.Placemark place = placemarks[0];
+
+        if (mounted) {
+          setState(() {
+            _buildingCtrl.text = place.name ?? '';
+            // Combines street, sub-locality, and locality into one string
+            _streetCtrl.text = '${place.street ?? ''} ${place.subLocality ?? ''} ${place.locality ?? ''}'.trim();
+            _postalCtrl.text = place.postalCode ?? '';
+            _stateCtrl.text = place.administrativeArea ?? '';
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Address autofilled from current location.'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2),
+              )
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint("Error reverse geocoding: $e");
+    }
   }
 
   // --- UI BUILDER ---
@@ -117,7 +169,8 @@ class _EditAddressPageState extends State<EditAddressPage> {
                       TileLayer(
                         maxZoom: 20,
                         urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.example.fooddeliveryapp',
+                        // Make sure to use a unique name, not 'example'
+                        userAgentPackageName: 'com.mycustomname.fooddeliveryapp',
                       ),
                       MarkerLayer(
                         markers: [
@@ -138,8 +191,13 @@ class _EditAddressPageState extends State<EditAddressPage> {
                       backgroundColor: Theme.of(context).cardColor,
                       elevation: 4,
                       onPressed: () async {
-                        if (_trackingEnabled) stopTracking();
-                        else await startTracking();
+                        if (_trackingEnabled) {
+                          stopTracking();
+                        } else {
+                          // Allow autofill to trigger again if they manually press the locate button
+                          _hasAutofilled = false;
+                          await startTracking();
+                        }
                       },
                       child: Icon(
                         _trackingEnabled ? Icons.my_location : Icons.location_searching,
@@ -165,23 +223,23 @@ class _EditAddressPageState extends State<EditAddressPage> {
                   children: [
                     Row(
                       children: [
-                        Expanded(child: _buildTextField(context, 'Building name', 'ABC Enterprise')),
+                        Expanded(child: _buildTextField(context, 'Building name', 'ABC Enterprise', controller: _buildingCtrl)),
                         const SizedBox(width: 16),
-                        Expanded(child: _buildTextField(context, 'Floor/Unit', '123')),
+                        Expanded(child: _buildTextField(context, 'Floor/Unit', '123', controller: _floorCtrl)),
                       ],
                     ),
                     const SizedBox(height: 16),
-                    _buildTextField(context, 'Street', 'Jalan ABC, Taman Setapak'),
+                    _buildTextField(context, 'Street', 'Jalan ABC, Taman Setapak', controller: _streetCtrl),
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        Expanded(child: _buildTextField(context, 'Postal Code', '53000')),
+                        Expanded(child: _buildTextField(context, 'Postal Code', '53000', controller: _postalCtrl)),
                         const SizedBox(width: 16),
-                        Expanded(child: _buildTextField(context, 'State', 'Kuala Lumpur')),
+                        Expanded(child: _buildTextField(context, 'State', 'Kuala Lumpur', controller: _stateCtrl)),
                       ],
                     ),
                     const SizedBox(height: 16),
-                    _buildTextField(context, 'Delivery Instruction', 'E.g. Leave at lobby...', isOptional: true, maxLines: 3),
+                    _buildTextField(context, 'Delivery Instruction', 'E.g. Leave at lobby...', isOptional: true, maxLines: 3, controller: _instructionCtrl),
 
                     const SizedBox(height: 24),
                     const Text('Add a tag', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -200,7 +258,11 @@ class _EditAddressPageState extends State<EditAddressPage> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () {
+                          // TODO: Save to Supabase user table here
+                          // Example: final fullAddress = '${_buildingCtrl.text}, ${_streetCtrl.text}, ${_postalCtrl.text} ${_stateCtrl.text}';
+                          Navigator.pop(context);
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange,
                           foregroundColor: Colors.white,
@@ -234,7 +296,7 @@ class _EditAddressPageState extends State<EditAddressPage> {
     );
   }
 
-  Widget _buildTextField(BuildContext context, String label, String hint, {bool isOptional = false, int maxLines = 1}) {
+  Widget _buildTextField(BuildContext context, String label, String hint, {bool isOptional = false, int maxLines = 1, TextEditingController? controller}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -250,6 +312,7 @@ class _EditAddressPageState extends State<EditAddressPage> {
         ),
         const SizedBox(height: 8),
         TextField(
+          controller: controller,
           maxLines: maxLines,
           decoration: InputDecoration(
             hintText: hint,
