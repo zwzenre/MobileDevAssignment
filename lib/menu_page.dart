@@ -349,14 +349,16 @@ class _MenuPageState extends State<MenuPage> {
                             ),
                         ],
                       ),
+
                       ElevatedButton.icon(
                         onPressed: (item['availability'] != false && item['is_available'] != false)
-                            ? () => _addToCart(item)
+                            ? () => _addToCart(Map<String, dynamic>.from(item))
                             : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primary,
                         ),
-                        child: const Text('add'),
+                        icon: const Icon(Icons.add_shopping_cart, size: 18),  // Add icon
+                        label: const Text('Add'),  // Use 'label' instead of 'child'
                       ),
                     ],
                   ),
