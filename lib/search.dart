@@ -17,6 +17,7 @@ class _SearchPageState extends State<SearchPage> {
 
   List items = [];
   List categories = [];
+  List restaurants = [];
 
   String searchText = "";
   String selectedCategory = "All";
@@ -29,7 +30,6 @@ class _SearchPageState extends State<SearchPage> {
     fetchData();
   }
 
-  // fetch items with restaurant join
   Future<void> fetchData() async {
     try {
       final itemData = await supabase
@@ -38,9 +38,12 @@ class _SearchPageState extends State<SearchPage> {
 
       final categoryData = await supabase.from('category').select();
 
+      final restaurantData = await supabase.from('restaurant').select();
+
       setState(() {
         items = itemData;
         categories = categoryData;
+        restaurants = restaurantData;
         isLoading = false;
       });
     } catch (e) {
@@ -53,20 +56,26 @@ class _SearchPageState extends State<SearchPage> {
   List get filteredItems {
     return items.where((item) {
       final name = item['itemname']?.toLowerCase() ?? '';
-      final categoryId = item['categoryid'];
-
       final matchesSearch = name.contains(searchText.toLowerCase());
 
       if (selectedCategory == "All") return matchesSearch;
 
       final category = categories.where(
-            (c) => c['categoryid'] == categoryId,
+            (c) => c['categoryid'] == item['categoryid'],
       ).toList();
 
       final categoryName =
       category.isNotEmpty ? category.first['categoryname'] : '';
 
       return matchesSearch && categoryName == selectedCategory;
+    }).toList();
+  }
+
+  // filter restaurants
+  List get filteredRestaurants {
+    return restaurants.where((r) {
+      final name = r['resname']?.toLowerCase() ?? '';
+      return name.contains(searchText.toLowerCase());
     }).toList();
   }
 
@@ -99,7 +108,7 @@ class _SearchPageState extends State<SearchPage> {
                 });
               },
               decoration: InputDecoration(
-                hintText: "Search food...",
+                hintText: "Search food or restaurant...",
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
                 fillColor: theme.cardColor,
@@ -128,22 +137,49 @@ class _SearchPageState extends State<SearchPage> {
 
           const SizedBox(height: 10),
 
-          // items list
           Expanded(
-            child: filteredItems.isEmpty
+            child: (filteredItems.isEmpty &&
+                filteredRestaurants.isEmpty)
                 ? Center(
               child: Text(
-                "No items found",
+                "No results found",
                 style: TextStyle(color: theme.hintColor),
               ),
             )
-                : ListView.builder(
+                : ListView(
               padding: const EdgeInsets.all(12),
-              itemCount: filteredItems.length,
-              itemBuilder: (context, index) {
-                final item = filteredItems[index];
-                return _buildItemCard(item);
-              },
+              children: [
+                // restaurants section
+                if (filteredRestaurants.isNotEmpty) ...[
+                  const Text(
+                    "Restaurants",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ...filteredRestaurants
+                      .map((r) => _buildRestaurantCard(r))
+                      .toList(),
+                  const SizedBox(height: 20),
+                ],
+
+                // items section
+                if (filteredItems.isNotEmpty) ...[
+                  const Text(
+                    "Items",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ...filteredItems
+                      .map((i) => _buildItemCard(i))
+                      .toList(),
+                ],
+              ],
             ),
           ),
         ],
@@ -151,7 +187,6 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  // category chip
   Widget _buildCategoryChip(String name) {
     final theme = Theme.of(context);
     final isSelected = selectedCategory == name;
@@ -177,18 +212,49 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  // item card with navigation to restaurant details
-  Widget _buildItemCard(Map item) {
+  Widget _buildRestaurantCard(Map r) {
     final theme = Theme.of(context);
 
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RestaurantDetailsPage(
+                restaurant: {
+                  ...r,
+                  'id': r['resid'],
+                },
+              ),
+            ),
+          );
+        },
+        leading: r['image_url'] != null &&
+            r['image_url'].toString().isNotEmpty
+            ? CachedNetworkImage(
+          imageUrl: r['image_url'],
+          width: 60,
+          height: 60,
+          fit: BoxFit.cover,
+          errorWidget: (_, __, ___) => _placeholder(),
+        )
+            : _placeholder(),
+        title: Text(r['resname'] ?? ''),
+        subtitle: const Text("Restaurant"),
+      ),
+    );
+  }
+
+  Widget _buildItemCard(Map item) {
+    final theme = Theme.of(context);
     final restaurant = item['restaurant'];
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         onTap: () {
-          final restaurant = item['restaurant'];
-
           if (restaurant == null) return;
 
           Navigator.push(
@@ -203,8 +269,6 @@ class _SearchPageState extends State<SearchPage> {
             ),
           );
         },
-
-        // item image
         leading: item['image_url'] != null &&
             item['image_url'].toString().isNotEmpty
             ? CachedNetworkImage(
@@ -212,36 +276,11 @@ class _SearchPageState extends State<SearchPage> {
           width: 60,
           height: 60,
           fit: BoxFit.cover,
-          placeholder: (_, __) => Container(
-            width: 60,
-            height: 60,
-            color: theme.colorScheme.primary.withValues(alpha: 0.1),
-            child: Center(
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-          ),
           errorWidget: (_, __, ___) => _placeholder(),
         )
             : _placeholder(),
-
         title: Text(item['itemname'] ?? ''),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(item['itemdesc'] ?? ''),
-            const SizedBox(height: 4),
-            Text(
-              restaurant?['resname'] ?? '',
-              style: TextStyle(
-                fontSize: 12,
-                color: theme.hintColor,
-              ),
-            ),
-          ],
-        ),
+        subtitle: Text(restaurant?['resname'] ?? ''),
         trailing: Text(
           'RM ${(item['itemprice'] ?? 0).toDouble().toStringAsFixed(2)}',
         ),
@@ -249,7 +288,6 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  // fallback image
   Widget _placeholder() {
     final theme = Theme.of(context);
 

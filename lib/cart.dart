@@ -97,16 +97,18 @@ class _CartState extends State<Cart> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Cart', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.orange,
-        foregroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
         elevation: 0,
         centerTitle: true,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.orange))
+          ? Center(child: CircularProgressIndicator(color: theme.colorScheme.primary))
           : _cartItems.isEmpty
           ? const Center(child: Text('Your cart is empty', style: TextStyle(fontSize: 18)))
           : ListView.builder(
@@ -122,6 +124,7 @@ class _CartState extends State<Cart> {
   }
 
   Widget _buildCartItemCard(Map<String, dynamic> cartItem) {
+    final theme = Theme.of(context);
     final itemData = cartItem['item'] ?? {};
     final price = num.tryParse((itemData['itemprice'] ?? 0).toString())?.toDouble() ?? 0.0;
 
@@ -133,25 +136,24 @@ class _CartState extends State<Cart> {
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            // Item Image
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: Container(
                 width: 70,
                 height: 70,
-                color: Colors.orange.shade100,
+                color: theme.colorScheme.primaryContainer,
                 child: itemData['image_url'] != null && itemData['image_url'].toString().isNotEmpty
                     ? CachedNetworkImage(
                   imageUrl: itemData['image_url'],
                   fit: BoxFit.cover,
-                  errorWidget: (context, url, error) => const Icon(Icons.fastfood, color: Colors.orange),
+                  errorWidget: (context, url, error) =>
+                      Icon(Icons.fastfood, color: theme.colorScheme.primary),
                 )
-                    : const Icon(Icons.fastfood, color: Colors.orange),
+                    : Icon(Icons.fastfood, color: theme.colorScheme.primary),
               ),
             ),
             const SizedBox(width: 16),
 
-            // Details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -163,22 +165,24 @@ class _CartState extends State<Cart> {
                   const SizedBox(height: 8),
                   Text(
                     'RM ${price.toStringAsFixed(2)}',
-                    style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
             ),
 
-            // Quantity controls
             Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.remove_circle_outline, color: Colors.orange),
+                  icon: Icon(Icons.remove_circle_outline, color: theme.colorScheme.primary),
                   onPressed: () => _updateQuantity(cartItem['cartitemid'], cartItem['quantity'], -1),
                 ),
                 Text('${cartItem['quantity']}', style: const TextStyle(fontSize: 16)),
                 IconButton(
-                  icon: const Icon(Icons.add_circle_outline, color: Colors.orange),
+                  icon: Icon(Icons.add_circle_outline, color: theme.colorScheme.primary),
                   onPressed: () => _updateQuantity(cartItem['cartitemid'], cartItem['quantity'], 1),
                 ),
               ],
@@ -190,12 +194,14 @@ class _CartState extends State<Cart> {
   }
 
   Widget _buildBottomSummary() {
+    final theme = Theme.of(context);
+
     if (_cartItems.isEmpty || _isLoading) return const SizedBox.shrink();
 
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color: theme.cardColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
@@ -213,7 +219,8 @@ class _CartState extends State<Cart> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Subtotal', style: TextStyle(color: Colors.grey)),
-                Text('RM ${subtotal.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text('RM ${subtotal.toStringAsFixed(2)}',
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 8),
@@ -221,7 +228,8 @@ class _CartState extends State<Cart> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Delivery Fee', style: TextStyle(color: Colors.grey)),
-                Text('RM ${deliveryFee.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text('RM ${deliveryFee.toStringAsFixed(2)}',
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
               ],
             ),
             const Padding(
@@ -231,34 +239,40 @@ class _CartState extends State<Cart> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Total', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text('Total',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 Text(
                   'RM ${(subtotal + deliveryFee).toStringAsFixed(2)}',
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.orange),
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 20),
 
-            // Checkout Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
                   Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const Payment())
-                  );
+                      MaterialPageRoute(builder: (_) => const Payment()));
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
                   ),
                 ),
-                child: const Text('Proceed to Checkout', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Proceed to Checkout',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ],
