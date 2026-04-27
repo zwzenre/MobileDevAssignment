@@ -117,7 +117,7 @@ class _EditAddressPageState extends State<EditAddressPage> {
                       TileLayer(
                         maxZoom: 20,
                         urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.example.app',
+                        userAgentPackageName: 'com.example.fooddeliveryapp',
                       ),
                       MarkerLayer(
                         markers: [
