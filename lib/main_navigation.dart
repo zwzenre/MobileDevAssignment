@@ -4,7 +4,6 @@ import 'search.dart';
 import 'cart.dart';
 import 'account.dart';
 
-
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
 
@@ -24,6 +23,8 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       body: pages[currentIndex],
 
@@ -34,8 +35,12 @@ class _MainNavigationState extends State<MainNavigation> {
             currentIndex = index;
           });
         },
-        selectedItemColor: Colors.orange,
-        unselectedItemColor: Colors.grey,
+
+        selectedItemColor: theme.colorScheme.primary,
+        unselectedItemColor: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+
+        backgroundColor: theme.scaffoldBackgroundColor,
+
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
