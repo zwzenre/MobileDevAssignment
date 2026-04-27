@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'edit_address.dart'; // Ensure you have this imported for navigation
+import 'edit_address.dart';
 
 class Payment extends StatefulWidget {
   const Payment({super.key});
@@ -10,7 +10,7 @@ class Payment extends StatefulWidget {
 }
 
 class _PaymentState extends State<Payment> {
-  int _selectedPaymentMethod = 0; // 0: Cash, 1: E-Wallet, 2: Credit Card
+  int _selectedPaymentMethod = 0;
   List<dynamic> _cartItems = [];
   bool _isLoading = true;
   String? _cartId;
@@ -71,14 +71,12 @@ class _PaymentState extends State<Payment> {
       final user = supabase.auth.currentUser;
       if (user == null || _cartId == null) return;
 
-      // Create Order
       final order = await supabase.from('order').insert({
         'userid': user.id,
         'totalprice': _subtotal + _deliveryFee,
         'status': 'pending',
       }).select().single();
 
-      // Migrate cart_items to order_items (Assuming you want to keep historical record)
       for (var item in _cartItems) {
         await supabase.from('order_item').insert({
           'orderid': order['orderid'],
@@ -88,7 +86,6 @@ class _PaymentState extends State<Payment> {
         });
       }
 
-      // Mark cart as completed
       await supabase.from('cart').update({'status': 'completed'}).eq('cartid', _cartId as Object);
 
       if (mounted) {
@@ -108,22 +105,23 @@ class _PaymentState extends State<Payment> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Checkout', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.orange,
+        backgroundColor: theme.colorScheme.primary,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.orange))
+          ? Center(child: CircularProgressIndicator(color: theme.colorScheme.primary))
           : SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Delivery Address Section
             const Text('Delivery Address', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             Card(
@@ -133,10 +131,10 @@ class _PaymentState extends State<Payment> {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.location_on, color: Colors.orange),
+                  child: Icon(Icons.location_on, color: theme.colorScheme.primary),
                 ),
                 title: const Text('Home', style: TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: const Text('123 Jalan Ampang, Kuala Lumpur'),
@@ -144,13 +142,12 @@ class _PaymentState extends State<Payment> {
                   onPressed: () {
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const EditAddressPage()));
                   },
-                  child: const Text('Change', style: TextStyle(color: Colors.orange)),
+                  child: Text('Change', style: TextStyle(color: theme.colorScheme.primary)),
                 ),
               ),
             ),
             const SizedBox(height: 24),
 
-            // Order Summary Section
             const Text('Order Summary', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             Card(
@@ -169,9 +166,7 @@ class _PaymentState extends State<Payment> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Expanded(
-                              child: Text('${cartItem['quantity']}x ${itemData['itemname'] ?? 'Item'}',
-                                style: const TextStyle(fontWeight: FontWeight.w500),
-                              ),
+                              child: Text('${cartItem['quantity']}x ${itemData['itemname'] ?? 'Item'}'),
                             ),
                             Text('RM ${(price * cartItem['quantity']).toStringAsFixed(2)}'),
                           ],
@@ -200,7 +195,6 @@ class _PaymentState extends State<Payment> {
             ),
             const SizedBox(height: 24),
 
-            // Payment Methods Section
             const Text('Payment Method', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             _buildPaymentOption(0, Icons.money, 'Cash on Delivery'),
@@ -210,11 +204,10 @@ class _PaymentState extends State<Payment> {
         ),
       ),
 
-      // Bottom Action Bar
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
+          color: theme.cardColor,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           boxShadow: [
             BoxShadow(
@@ -228,7 +221,7 @@ class _PaymentState extends State<Payment> {
           child: ElevatedButton(
             onPressed: (_cartItems.isEmpty || _isLoading) ? null : _placeOrder,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
+              backgroundColor: theme.colorScheme.primary,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
@@ -245,8 +238,8 @@ class _PaymentState extends State<Payment> {
     );
   }
 
-  // Helper widget to generate selectable payment method cards
   Widget _buildPaymentOption(int index, IconData icon, String title) {
+    final theme = Theme.of(context);
     final isSelected = _selectedPaymentMethod == index;
 
     return GestureDetector(
@@ -257,20 +250,23 @@ class _PaymentState extends State<Payment> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
           side: BorderSide(
-            color: isSelected ? Colors.orange : Colors.transparent,
+            color: isSelected ? theme.colorScheme.primary : Colors.transparent,
             width: 2,
           ),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: ListTile(
-            leading: Icon(icon, color: isSelected ? Colors.orange : Colors.grey),
+            leading: Icon(
+              icon,
+              color: isSelected ? theme.colorScheme.primary : Colors.grey,
+            ),
             title: Text(
-                title,
-                style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)
+              title,
+              style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
             ),
             trailing: isSelected
-                ? const Icon(Icons.check_circle, color: Colors.orange)
+                ? Icon(Icons.check_circle, color: theme.colorScheme.primary)
                 : const Icon(Icons.circle_outlined, color: Colors.grey),
           ),
         ),

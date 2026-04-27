@@ -260,7 +260,7 @@ class _HomeState extends State<Home> {
         final data = snapshot.data!;
 
         return SizedBox(
-          height: 190,
+          height: 200,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -280,42 +280,100 @@ class _HomeState extends State<Home> {
                   );
                 },
                 child: Container(
-                  width: 180,
+                  width: 200, // slightly wider to avoid tight layout
                   margin: const EdgeInsets.only(right: 16),
                   child: Card(
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    clipBehavior: Clip.antiAlias, // prevents overflow visually
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        r['image_url'] != null && r['image_url'].toString().isNotEmpty
+                        // image
+                        r['image_url'] != null &&
+                            r['image_url'].toString().isNotEmpty
                             ? CachedNetworkImage(
                           imageUrl: r['image_url'],
-                          height: 100,
+                          height: 110,
                           width: double.infinity,
                           fit: BoxFit.cover,
                           placeholder: (context, _) => SizedBox(
-                            height: 100,
+                            height: 110,
                             child: Center(
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: Theme.of(context).colorScheme.primary,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .primary,
                               ),
                             ),
                           ),
                           errorWidget: (_, __, ___) => _imgPlaceholder(),
                         )
                             : _imgPlaceholder(),
+
+                        // content
                         Padding(
                           padding: const EdgeInsets.all(8),
-                          child: Text(
-                            r['resname'] ?? '',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                r['resname'] ?? '',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+
+                              const SizedBox(height: 6),
+
+                              Row(
+                                children: [
+                                  Icon(Icons.star,
+                                      size: 14, color: Colors.orange),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    (r['rating'] ?? 'New').toString(),
+                                    style: const TextStyle(fontSize: 11),
+                                  ),
+
+                                  const SizedBox(width: 6),
+
+                                  Icon(Icons.access_time,
+                                      size: 14, color: Colors.blue),
+                                  const SizedBox(width: 4),
+                                  const Text(
+                                    '30 min',
+                                    style: TextStyle(fontSize: 11),
+                                  ),
+
+                                  const SizedBox(width: 6),
+
+                                  Icon(Icons.motorcycle,
+                                      size: 14, color: Colors.green),
+                                  const SizedBox(width: 4),
+
+                                  Flexible(
+                                    child: Text(
+                                      (r['delivery_fee'] == null ||
+                                          r['delivery_fee'] == 0)
+                                          ? 'Free'
+                                          : 'RM ${(r['delivery_fee']).toDouble().toStringAsFixed(2)}',
+                                      style: const TextStyle(fontSize: 11),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                        )
+                        ),
                       ],
                     ),
                   ),

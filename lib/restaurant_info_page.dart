@@ -7,11 +7,13 @@ class RestaurantInfoPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Restaurant Info'),
-        backgroundColor: Colors.orange,
-        foregroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -28,7 +30,7 @@ class RestaurantInfoPage extends StatelessWidget {
             const SizedBox(height: 8),
             Card(
               child: ListTile(
-                leading: const Icon(Icons.location_on, color: Colors.orange),
+                leading: Icon(Icons.location_on, color: theme.colorScheme.primary),
                 title: const Text('Delivery Address'),
                 subtitle: Text(restaurant['address'] ?? restaurant['resaddress'] ?? '123 Food Street'),
               ),
@@ -52,12 +54,12 @@ class RestaurantInfoPage extends StatelessWidget {
               child: Column(
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.phone, color: Colors.orange),
+                    leading: Icon(Icons.phone, color: theme.colorScheme.primary),
                     title: const Text('Phone'),
                     subtitle: Text(restaurant['phone'] ?? restaurant['resphone'] ?? '+60 12 345 6789'),
                   ),
                   ListTile(
-                    leading: const Icon(Icons.email, color: Colors.orange),
+                    leading: Icon(Icons.email, color: theme.colorScheme.primary),
                     title: const Text('Email'),
                     subtitle: Text(restaurant['email'] ?? 'restaurant@foodapp.com'),
                   ),
