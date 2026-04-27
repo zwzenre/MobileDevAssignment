@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'services/supabase_service.dart';
-import 'menu_page.dart';
+import 'cart.dart';
+import 'restaurant_info_page.dart';
+import 'reviews_page.dart';
 
 class RestaurantDetailsPage extends StatefulWidget {
   final Map<String, dynamic> restaurant;
@@ -19,12 +21,50 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
   final SupabaseService _service = SupabaseService();
   List<dynamic> _menuItems = [];
   bool _isLoadingMenu = true;
-  int _selectedTab = 0; // 0: Menu, 1: Info, 2: Reviews
+  int _cartItemCount = 0;
 
   @override
   void initState() {
     super.initState();
     _fetchMenuItems();
+    _fetchCartItemCount();
+  }
+
+  Future<void> _fetchCartItemCount() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user == null) {
+        setState(() => _cartItemCount = 0);
+        return;
+      }
+
+      final cartResponse = await supabase
+          .from('cart')
+          .select()
+          .eq('userid', user.id)
+          .eq('status', 'active')
+          .maybeSingle();
+
+      if (cartResponse != null) {
+        final itemsResponse = await supabase
+            .from('cart_item')
+            .select()
+            .eq('cartid', cartResponse['cartid']);
+
+        setState(() {
+          _cartItemCount = itemsResponse.length;
+        });
+      } else {
+        setState(() {
+          _cartItemCount = 0;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching cart count: $e');
+      setState(() => _cartItemCount = 0);
+    }
   }
 
   Future<void> _fetchMenuItems() async {
@@ -33,7 +73,6 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
       final restaurantItems = allItems
           .where((item) => item['restaurant_id'] == widget.restaurant['id'] || item['resid'] == widget.restaurant['id'])
           .where((item) => item['is_available'] != false && item['availability'] != false)
-          .take(5)
           .toList();
 
       setState(() {
@@ -46,14 +85,23 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
     }
   }
 
+  // Method to navigate to Cart and refresh count when returning
+  Future<void> _navigateToCart() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const Cart()),
+    );
+    // Refresh cart count when coming back from Cart page
+    await _fetchCartItemCount();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          // Hero Image with App Bar
           SliverAppBar(
-            expandedHeight: 280,
+            expandedHeight: 250,
             pinned: true,
             backgroundColor: Colors.orange,
             foregroundColor: Colors.white,
@@ -62,18 +110,15 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
                 widget.restaurant['resname'] ?? 'Restaurant',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
+                  fontSize: 14,
                   shadows: [
-                    Shadow(
-                      blurRadius: 10,
-                      color: Colors.black26,
-                    ),
+                    Shadow(blurRadius: 10, color: Colors.black26),
                   ],
                 ),
               ),
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Restaurant Image
                   widget.restaurant['image_url'] != null &&
                       widget.restaurant['image_url'].toString().isNotEmpty
                       ? Image.network(
@@ -82,17 +127,16 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
                     errorBuilder: (_, __, ___) => Container(
                       color: Colors.orange,
                       child: const Center(
-                        child: Icon(Icons.restaurant, size: 100, color: Colors.white),
+                        child: Icon(Icons.restaurant, size: 80, color: Colors.white),
                       ),
                     ),
                   )
                       : Container(
                     color: Colors.orange,
                     child: const Center(
-                      child: Icon(Icons.restaurant, size: 100, color: Colors.white),
+                      child: Icon(Icons.restaurant, size: 80, color: Colors.white),
                     ),
                   ),
-                  // Gradient overlay for better text visibility
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -110,73 +154,25 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
             ),
           ),
 
-          // Restaurant Info Card (floating)
+          // Quick Info Bar
           SliverToBoxAdapter(
             child: Transform.translate(
               offset: const Offset(0, -20),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Card(
                   elevation: 8,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        // Rating and Basic Info Row
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _buildInfoChip(
-                              Icons.star,
-                              widget.restaurant['rating']?.toString() ?? 'New',
-                              Colors.orange,
-                            ),
-                            _buildInfoChip(
-                              Icons.access_time,
-                              widget.restaurant['delivery_time'] != null
-                                  ? '${widget.restaurant['delivery_time']} min'
-                                  : '30-45 min',
-                              Colors.blue,
-                            ),
-                            _buildInfoChip(
-                              Icons.motorcycle,
-                              widget.restaurant['delivery_fee'] != null
-                                  ? '₱${widget.restaurant['delivery_fee']}'
-                                  : '₱0',
-                              Colors.green,
-                            ),
-                          ],
-                        ),
-                        const Divider(height: 24),
-
-                        // Opening Hours & Min Order
-                        Row(
-                          children: [
-                            Icon(Icons.schedule, size: 20, color: Colors.grey[600]),
-                            const SizedBox(width: 8),
-                            Text(
-                              (widget.restaurant['is_open'] ?? true)
-                                  ? 'Open Now • Closes 10:00 PM'
-                                  : 'Currently Closed',
-                              style: TextStyle(
-                                color: (widget.restaurant['is_open'] ?? true)
-                                    ? Colors.green[700]
-                                    : Colors.red,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const Spacer(),
-                            Icon(Icons.receipt, size: 20, color: Colors.grey[600]),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Min: ₱${widget.restaurant['min_order_amount'] ?? 100}',
-                              style: const TextStyle(fontWeight: FontWeight.w500),
-                            ),
-                          ],
-                        ),
+                        _buildQuickInfo(Icons.star, widget.restaurant['rating']?.toString() ?? 'New', Colors.orange),
+                        _buildQuickInfo(Icons.access_time, widget.restaurant['delivery_time'] != null ? '${widget.restaurant['delivery_time']} min' : '30 min', Colors.blue),
+                        _buildQuickInfo(Icons.motorcycle, widget.restaurant['delivery_fee'] != null ? 'RM${widget.restaurant['delivery_fee']}' : 'RM0', Colors.green),
                       ],
                     ),
                   ),
@@ -185,36 +181,96 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
             ),
           ),
 
-          // Tab Bar
+          // Navigation Buttons (Info & Reviews)
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Row(
-                  children: [
-                    _buildTabButton('Menu', 0),
-                    _buildTabButton('Info', 1),
-                    _buildTabButton('Reviews', 2),
-                  ],
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => RestaurantInfoPage(restaurant: widget.restaurant),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.info_outline, size: 18),
+                      label: const Text('Restaurant Info'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        side: BorderSide(color: Colors.orange.shade200),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ReviewsPage(restaurant: widget.restaurant),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.rate_review, size: 18),
+                      label: const Text('Reviews'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        side: BorderSide(color: Colors.orange.shade200),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Menu Header
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Text(
+                'Menu',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
           ),
 
-          // Tab Content
-          SliverFillRemaining(
-            child: _buildTabContent(),
+          // Menu Items List
+          _isLoadingMenu
+              ? const SliverFillRemaining(
+            child: Center(child: CircularProgressIndicator(color: Colors.orange)),
+          )
+              : _menuItems.isEmpty
+              ? const SliverFillRemaining(
+            child: Center(child: Text('No menu items available')),
+          )
+              : SliverList(
+            delegate: SliverChildBuilderDelegate(
+                  (context, index) => _buildMenuItemCard(_menuItems[index]),
+              childCount: _menuItems.length,
+            ),
           ),
         ],
       ),
 
-      // Bottom Action Bar
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(16),
+      // View Cart Button - Only shows when cart has items
+      bottomNavigationBar: _cartItemCount > 0
+          ? Container(
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [
@@ -226,55 +282,43 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
           ],
         ),
         child: SafeArea(
-          child: ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => MenuPage(
-                    restaurantId: widget.restaurant['id'] ?? widget.restaurant['resid'],
-                    restaurantName: widget.restaurant['resname'] ?? 'Restaurant',
-                  ),
-                ),
-              );
-            },
+          child: ElevatedButton.icon(
+            onPressed: _navigateToCart, // Use the method that refreshes on return
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
               ),
-              elevation: 0,
             ),
-            child: const Text(
-              'View Full Menu',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+            icon: const Icon(Icons.shopping_cart, size: 20),
+            label: Text(
+              'View Cart ($_cartItemCount)',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
         ),
-      ),
+      )
+          : const SizedBox.shrink(), // Hidden when cart is empty
     );
   }
 
-  Widget _buildInfoChip(IconData icon, String label, Color color) {
+  Widget _buildQuickInfo(IconData icon, String label, Color color) {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: color, size: 24),
+          child: Icon(icon, color: color, size: 20),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         Text(
           label,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 11,
             fontWeight: FontWeight.bold,
             color: color,
           ),
@@ -283,126 +327,20 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
     );
   }
 
-  Widget _buildTabButton(String title, int index) {
-    final isSelected = _selectedTab == index;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _selectedTab = index),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: isSelected
-                ? [
-              BoxShadow(
-                color: Colors.grey.withValues(alpha: 0.2),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ]
-                : null,
-          ),
-          child: Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? Colors.orange : Colors.grey[600],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTabContent() {
-    switch (_selectedTab) {
-      case 0:
-        return _buildMenuTab();
-      case 1:
-        return _buildInfoTab();
-      case 2:
-        return _buildReviewsTab();
-      default:
-        return _buildMenuTab();
-    }
-  }
-
-  Widget _buildMenuTab() {
-    if (_isLoadingMenu) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(color: Colors.orange),
-            SizedBox(height: 16),
-            Text('Loading menu...'),
-          ],
-        ),
-      );
-    }
-
-    if (_menuItems.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.restaurant_menu, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              'No menu items available',
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () {
-                // Navigate to full menu page even if preview is empty
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => MenuPage(
-                      restaurantId: widget.restaurant['id'] ?? widget.restaurant['resid'],
-                      restaurantName: widget.restaurant['resname'] ?? 'Restaurant',
-                    ),
-                  ),
-                );
-              },
-              child: const Text('Browse Full Menu'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _menuItems.length,
-      itemBuilder: (context, index) {
-        final item = _menuItems[index];
-        return _buildMenuItemCard(item);
-      },
-    );
-  }
-
   Widget _buildMenuItemCard(Map<String, dynamic> item) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(10),
         child: Row(
           children: [
-            // Item Image
             ClipRRect(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               child: SizedBox(
-                width: 80,
-                height: 80,
-                child: item['image_url'] != null &&
-                    item['image_url'].toString().isNotEmpty
+                width: 60,
+                height: 60,
+                child: item['image_url'] != null && item['image_url'].toString().isNotEmpty
                     ? Image.network(
                   item['image_url'],
                   fit: BoxFit.cover,
@@ -411,61 +349,36 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
                     : _placeholder(),
               ),
             ),
-            const SizedBox(width: 14),
-
-            // Item Details
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     item['itemname'] ?? item['name'] ?? 'Menu Item',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
-
-                  if ((item['itemdesc'] ?? item['description'] ?? '')
-                      .toString()
-                      .isNotEmpty)
+                  const SizedBox(height: 2),
+                  if ((item['itemdesc'] ?? item['description'] ?? '').toString().isNotEmpty)
                     Text(
                       item['itemdesc'] ?? item['description'] ?? '',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 13),
-                    ),
-                  const SizedBox(height: 6),
-
-                  // Halal/Non-Halal badge (if your items have this field)
-                  if (item['ishalal'] != null)
-                    Text(
-                      item['ishalal'] == true ? 'Halal' : 'Non-Halal',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: item['ishalal'] == true
-                            ? Colors.green
-                            : Colors.red,
-                      ),
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
                     ),
                 ],
               ),
             ),
-
-            // Price and Add Button
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '₱${(item['itemprice'] ?? item['price'] ?? 0).toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
+                  'RM${(item['itemprice'] ?? item['price'] ?? 0).toStringAsFixed(2)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 IconButton(
                   onPressed: (item['availability'] != false && item['is_available'] != false)
                       ? () => _addToCart(item)
@@ -474,9 +387,9 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
                     backgroundColor: Colors.orange,
                     foregroundColor: Colors.white,
                     shape: const CircleBorder(),
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(6),
                   ),
-                  icon: const Icon(Icons.add, size: 18),
+                  icon: const Icon(Icons.add, size: 16),
                 ),
               ],
             ),
@@ -490,163 +403,11 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
     return Container(
       color: Colors.orange.shade100,
       child: const Center(
-        child: Icon(Icons.fastfood, color: Colors.orange, size: 40),
+        child: Icon(Icons.fastfood, color: Colors.orange, size: 30),
       ),
     );
   }
 
-  Widget _buildInfoTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Description
-          if (widget.restaurant['description'] != null &&
-              widget.restaurant['description'].toString().isNotEmpty) ...[
-            const Text(
-              'About',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              widget.restaurant['description'],
-              style: const TextStyle(fontSize: 16, height: 1.5),
-            ),
-            const SizedBox(height: 24),
-          ],
-
-          // Address
-          const Text(
-            'Location',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.location_on, color: Colors.orange),
-              title: const Text('Delivery Address'),
-              subtitle: Text(widget.restaurant['address'] ?? widget.restaurant['resaddress'] ?? '123 Food Street, Manila'),
-              onTap: () {
-                // TODO: Open maps
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Maps integration coming soon!')),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Business Hours
-          const Text(
-            'Business Hours',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            child: Column(
-              children: [
-                _buildHourRow('Monday - Friday', '10:00 AM - 10:00 PM'),
-                _buildHourRow('Saturday', '11:00 AM - 11:00 PM'),
-                _buildHourRow('Sunday', '11:00 AM - 9:00 PM'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Contact
-          const Text(
-            'Contact',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.phone, color: Colors.orange),
-                  title: const Text('Phone'),
-                  subtitle: Text(widget.restaurant['phone'] ?? widget.restaurant['resphone'] ?? '+63 912 345 6789'),
-                  onTap: () {
-                    // TODO: Implement phone call
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Phone call feature coming soon!')),
-                    );
-                  },
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.email, color: Colors.orange),
-                  title: const Text('Email'),
-                  subtitle: Text(widget.restaurant['email'] ?? 'restaurant@foodapp.com'),
-                  onTap: () {
-                    // TODO: Implement email
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Email feature coming soon!')),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHourRow(String day, String hours) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(day, style: const TextStyle(fontWeight: FontWeight.w500)),
-          Text(hours, style: TextStyle(color: Colors.grey[600])),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReviewsTab() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.rate_review, size: 64, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text(
-            'No reviews yet',
-            style: TextStyle(color: Colors.grey[600], fontSize: 16),
-          ),
-          const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: () {
-              // TODO: Add review functionality
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Review feature coming soon!')),
-              );
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('Write a Review'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // UPDATED: Fully Integrated Supabase Cart Logic
   Future<void> _addToCart(Map<String, dynamic> item) async {
     try {
       final supabase = Supabase.instance.client;
@@ -655,22 +416,18 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
       if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please log in to add items to your cart.'),
+            content: Text('Please log in to add items'),
             backgroundColor: Colors.red,
           ),
         );
         return;
       }
 
-      // Show immediate feedback to user
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Adding ${item['itemname'] ?? item['name']} to cart...'),
-          duration: const Duration(seconds: 1),
-        ),
-      );
 
-      // 1. Get or create active cart
+      final deliveryFee = (widget.restaurant['delivery_fee'] ?? 5.0).toDouble();
+      final restaurantId = widget.restaurant['id'] ?? widget.restaurant['resid'];
+
+
       var cartResponse = await supabase
           .from('cart')
           .select()
@@ -680,20 +437,37 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
 
       String cartId;
       if (cartResponse == null) {
+
         final newCart = await supabase
             .from('cart')
-            .insert({'userid': user.id, 'status': 'active', 'subtotal': 0})
+            .insert({
+          'userid': user.id,
+          'status': 'active',
+          'subtotal': 0,
+          'delivery_fee': deliveryFee,  // Store delivery fee
+          'restaurant_id': restaurantId,  // Track which restaurant
+        })
             .select()
             .single();
         cartId = newCart['cartid'];
       } else {
         cartId = cartResponse['cartid'];
+
+
+        if ((cartResponse['delivery_fee'] ?? 5.0) != deliveryFee) {
+          await supabase
+              .from('cart')
+              .update({
+            'delivery_fee': deliveryFee,
+            'restaurant_id': restaurantId
+          })
+              .eq('cartid', cartId);
+        }
       }
 
-      // Get appropriate Item ID based on schema
       final itemId = item['itemid'] ?? item['id'];
 
-      // 2. Check if item already exists in cart
+
       var existingItem = await supabase
           .from('cart_item')
           .select()
@@ -702,12 +476,12 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
           .maybeSingle();
 
       if (existingItem != null) {
-        // Update existing quantity
+
         await supabase.from('cart_item').update({
           'quantity': existingItem['quantity'] + 1,
         }).eq('cartitemid', existingItem['cartitemid']);
       } else {
-        // Insert new cart item
+
         await supabase.from('cart_item').insert({
           'cartid': cartId,
           'itemid': itemId,
@@ -715,12 +489,31 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
         });
       }
 
+      final cartItems = await supabase
+          .from('cart_item')
+          .select('*, item(*)')
+          .eq('cartid', cartId);
+
+      double newSubtotal = 0;
+      for (var cartItem in cartItems) {
+        final price = (cartItem['item']['itemprice'] ?? 0).toDouble();
+        final qty = (cartItem['quantity'] ?? 1).toDouble();
+        newSubtotal += price * qty;
+      }
+
+      await supabase
+          .from('cart')
+          .update({'subtotal': newSubtotal})
+          .eq('cartid', cartId);
+
+      await _fetchCartItemCount();
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${item['itemname'] ?? item['name']} added successfully!'),
+            content: Text('${item['itemname'] ?? item['name']} added!'),
             backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
+            duration: const Duration(seconds: 1),
           ),
         );
       }
@@ -728,9 +521,8 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to add to cart: $e'),
+            content: Text('Failed to add: $e'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
           ),
         );
       }

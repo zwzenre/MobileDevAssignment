@@ -74,7 +74,12 @@ class _CartState extends State<Cart> {
             .update({'quantity': newQty})
             .eq('cartitemid', cartItemId);
       }
-      _fetchCartItems(); // Refresh the cart
+
+      await _fetchCartItems();
+
+      if (mounted && _cartItems.isEmpty) {
+        Navigator.pop(context);
+      }
     } catch (e) {
       debugPrint('Error updating quantity: $e');
     }
