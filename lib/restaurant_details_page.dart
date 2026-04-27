@@ -85,13 +85,13 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
     }
   }
 
-  // Method to navigate to Cart and refresh count when returning
+
   Future<void> _navigateToCart() async {
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const Cart()),
     );
-    // Refresh cart count when coming back from Cart page
+
     await _fetchCartItemCount();
   }
 
@@ -110,9 +110,13 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
                 widget.restaurant['resname'] ?? 'Restaurant',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 14,
+                  fontSize: 20,
+                  color: Colors.white,
                   shadows: [
-                    Shadow(blurRadius: 10, color: Colors.black26),
+                    Shadow(
+                      blurRadius: 10,
+                      color: Colors.black26,
+                    ),
                   ],
                 ),
               ),
@@ -154,7 +158,7 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
             ),
           ),
 
-          // Quick Info Bar
+
           SliverToBoxAdapter(
             child: Transform.translate(
               offset: const Offset(0, -20),
@@ -166,7 +170,7 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(16), // Increased padding
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
@@ -283,7 +287,7 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
         ),
         child: SafeArea(
           child: ElevatedButton.icon(
-            onPressed: _navigateToCart, // Use the method that refreshes on return
+            onPressed: _navigateToCart,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,
               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -299,7 +303,7 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
           ),
         ),
       )
-          : const SizedBox.shrink(), // Hidden when cart is empty
+          : const SizedBox.shrink(),
     );
   }
 
@@ -307,18 +311,18 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(10), // Increased padding
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: color, size: 20),
+          child: Icon(icon, color: color, size: 28), // Increased icon size from 20 to 28
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8), // Increased spacing
         Text(
           label,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 14, // Increased font size from 11 to 14
             fontWeight: FontWeight.bold,
             color: color,
           ),
@@ -423,10 +427,8 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
         return;
       }
 
-
       final deliveryFee = (widget.restaurant['delivery_fee'] ?? 5.0).toDouble();
       final restaurantId = widget.restaurant['id'] ?? widget.restaurant['resid'];
-
 
       var cartResponse = await supabase
           .from('cart')
@@ -437,22 +439,20 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
 
       String cartId;
       if (cartResponse == null) {
-
         final newCart = await supabase
             .from('cart')
             .insert({
           'userid': user.id,
           'status': 'active',
           'subtotal': 0,
-          'delivery_fee': deliveryFee,  // Store delivery fee
-          'restaurant_id': restaurantId,  // Track which restaurant
+          'delivery_fee': deliveryFee,
+          'restaurant_id': restaurantId,
         })
             .select()
             .single();
         cartId = newCart['cartid'];
       } else {
         cartId = cartResponse['cartid'];
-
 
         if ((cartResponse['delivery_fee'] ?? 5.0) != deliveryFee) {
           await supabase
@@ -467,7 +467,6 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
 
       final itemId = item['itemid'] ?? item['id'];
 
-
       var existingItem = await supabase
           .from('cart_item')
           .select()
@@ -476,12 +475,10 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
           .maybeSingle();
 
       if (existingItem != null) {
-
         await supabase.from('cart_item').update({
           'quantity': existingItem['quantity'] + 1,
         }).eq('cartitemid', existingItem['cartitemid']);
       } else {
-
         await supabase.from('cart_item').insert({
           'cartid': cartId,
           'itemid': itemId,
