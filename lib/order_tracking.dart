@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 class OrderTrackingPage extends StatefulWidget {
   final String? orderId;
@@ -13,6 +15,10 @@ class OrderTrackingPage extends StatefulWidget {
 class _OrderTrackingPageState extends State<OrderTrackingPage> {
   int _currentStep = 0;
   Timer? _timer;
+
+  // Mock locations for tracking map
+  final LatLng _restaurantLocation = const LatLng(3.215597, 101.728109);
+  final LatLng _userLocation = const LatLng(3.210000, 101.720000);
 
   @override
   void initState() {
@@ -54,7 +60,6 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        // Replace the back button so they don't accidentally go back to the payment screen
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
@@ -64,22 +69,61 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Map Placeholder Background
-            Container(
+            // Map View using OpenStreetMap
+            SizedBox(
               height: 250,
               width: double.infinity,
-              color: Colors.grey.shade200,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  Icon(Icons.map_outlined, size: 80, color: Colors.grey.shade400),
+                  FlutterMap(
+                    options: MapOptions(
+                      initialCenter: const LatLng(3.2128, 101.7240), // Center point between both markers
+                      initialZoom: 14.5,
+                    ),
+                    children: [
+                      TileLayer(
+                        maxZoom: 20,
+                        urlTemplate: 'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.student.fooddeliveryapp',
+                      ),
+                      // Draws a route line between the restaurant and the user
+                      PolylineLayer(
+                        polylines: [
+                          Polyline(
+                            points: [_restaurantLocation, _userLocation],
+                            strokeWidth: 4.0,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ],
+                      ),
+                      MarkerLayer(
+                        markers: [
+                          // Restaurant Marker
+                          Marker(
+                            point: _restaurantLocation,
+                            width: 40,
+                            height: 40,
+                            child: const Icon(Icons.storefront, color: Colors.blue, size: 36),
+                          ),
+                          // User/Delivery Marker
+                          Marker(
+                            point: _userLocation,
+                            width: 40,
+                            height: 40,
+                            child: const Icon(Icons.location_on, color: Colors.red, size: 40),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                   if (!isDelivered)
                     Positioned(
                       bottom: 20,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: theme.cardColor,
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
@@ -134,7 +178,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                           ],
                         ),
                         if (isDelivered)
-                          Icon(Icons.check_circle, color: Colors.green, size: 40),
+                          const Icon(Icons.check_circle, color: Colors.green, size: 40),
                       ],
                     ),
                     const SizedBox(height: 32),
