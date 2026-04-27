@@ -254,7 +254,7 @@ class _MenuPageState extends State<MenuPage> {
     );
   }
 
-  Widget _buildItem(Map item) {
+  Widget _buildItem(Map<String, dynamic> item) {
     final primary = Theme.of(context).colorScheme.primary;
 
     return Card(
@@ -356,7 +356,8 @@ class _MenuPageState extends State<MenuPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primary,
                         ),
-                        child: const Text('add'),
+                        icon: const Icon(Icons.add),
+                        label: const Text('add'),
                       ),
                     ],
                   ),
