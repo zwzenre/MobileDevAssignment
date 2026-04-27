@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'services/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MenuPage extends StatefulWidget {
   final dynamic restaurantId;
@@ -38,8 +39,8 @@ class _MenuPageState extends State<MenuPage> {
       final allItems = await _service.getItems();
 
       final restaurantItems = allItems
-          .where((item) => item['restaurant_id'] == widget.restaurantId)
-          .where((item) => item['is_available'] != false)
+          .where((item) => item['resid'] == widget.restaurantId || item['restaurant_id'] == widget.restaurantId)
+          .where((item) => item['availability'] != false && item['is_available'] != false)
           .toList();
 
       setState(() {
@@ -70,8 +71,10 @@ class _MenuPageState extends State<MenuPage> {
     setState(() {
       _searchQuery = query;
       _filteredItems = _menuItems.where((item) {
-        final name = item['name']?.toLowerCase() ?? '';
-        return name.contains(query.toLowerCase());
+        final name = (item['itemname'] ?? item['name'] ?? '').toLowerCase();
+        final description = (item['itemdesc'] ?? item['description'] ?? '').toLowerCase();
+        return name.contains(query.toLowerCase()) ||
+            description.contains(query.toLowerCase());
       }).toList();
     });
   }
@@ -85,20 +88,87 @@ class _MenuPageState extends State<MenuPage> {
         _filteredItems = _menuItems;
       } else {
         _filteredItems = _menuItems
-            .where((item) => (item['category'] ?? 'General') == category)
+            .where((item) => (item['categoryname'] ?? item['category'] ?? 'General') == category)
             .toList();
       }
     });
   }
 
-  // add to cart
-  void _addToCart(Map item) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('added ${item['name']}'),
-        backgroundColor: Colors.green,
-      ),
-    );
+  Future<void> _addToCart(Map<String, dynamic> item) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user == null) {
+        _showError('Please log in to add items to your cart.');
+        return;
+      }
+
+      // Show immediate feedback to user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Adding ${item['itemname'] ?? item['name']} to cart...'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+
+      // 1. Get or create active cart
+      var cartResponse = await supabase
+          .from('cart')
+          .select()
+          .eq('userid', user.id)
+          .eq('status', 'active')
+          .maybeSingle();
+
+      String cartId;
+      if (cartResponse == null) {
+        final newCart = await supabase
+            .from('cart')
+            .insert({'userid': user.id, 'status': 'active', 'subtotal': 0})
+            .select()
+            .single();
+        cartId = newCart['cartid'];
+      } else {
+        cartId = cartResponse['cartid'];
+      }
+
+      // Get appropriate Item ID based on schema
+      final itemId = item['itemid'] ?? item['id'];
+
+      // 2. Check if item already exists in cart
+      var existingItem = await supabase
+          .from('cart_item')
+          .select()
+          .eq('cartid', cartId)
+          .eq('itemid', itemId)
+          .maybeSingle();
+
+      if (existingItem != null) {
+        // Update existing quantity
+        await supabase.from('cart_item').update({
+          'quantity': existingItem['quantity'] + 1,
+        }).eq('cartitemid', existingItem['cartitemid']);
+      } else {
+        // Insert new cart item (Removed 'price' to match schema)
+        await supabase.from('cart_item').insert({
+          'cartid': cartId,
+          'itemid': itemId,
+          'quantity': 1,
+        });
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${item['itemname'] ?? item['name']} added successfully!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) _showError('Failed to add to cart: $e');
+    }
   }
 
   @override
@@ -208,34 +278,81 @@ class _MenuPageState extends State<MenuPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    item['name'] ?? '',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  // Name and Category Badge
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item['itemname'] ?? item['name'] ?? 'Menu Item',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (item['categoryname'] != null || item['category'] != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.orange[50],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            item['categoryname'] ?? item['category'],
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.orange[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
+                  const SizedBox(height: 4),
 
-                  const SizedBox(height: 6),
-
-                  Text(
-                    item['description'] ?? '',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
+                  // Description
+                  if ((item['itemdesc'] ?? item['description']) != null && (item['itemdesc'] ?? item['description']).toString().isNotEmpty)
+                    Text(
+                      item['itemdesc'] ?? item['description'],
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   const SizedBox(height: 8),
 
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'RM ${item['price']}',
-                        style: TextStyle(
-                          color: primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '₱${(item['itemprice'] ?? item['price'])?.toString() ?? '0'}',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange,
+                            ),
+                          ),
+                          if (item['availability'] == false || item['is_available'] == false)
+                            Text(
+                              'Currently unavailable',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.red[400],
+                              ),
+                            ),
+                        ],
                       ),
-
-                      ElevatedButton(
-                        onPressed: () => _addToCart(item),
+                      ElevatedButton.icon(
+                        onPressed: (item['availability'] != false && item['is_available'] != false)
+                            ? () => _addToCart(item)
+                            : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primary,
                         ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'services/supabase_service.dart';
 import 'menu_page.dart';
 
@@ -30,8 +31,8 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
     try {
       final allItems = await _service.getItems();
       final restaurantItems = allItems
-          .where((item) => item['restaurant_id'] == widget.restaurant['id'])
-          .where((item) => item['is_available'] != false)
+          .where((item) => item['restaurant_id'] == widget.restaurant['id'] || item['resid'] == widget.restaurant['id'])
+          .where((item) => item['is_available'] != false && item['availability'] != false)
           .take(5)
           .toList();
 
@@ -231,7 +232,7 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => MenuPage(
-                    restaurantId: widget.restaurant['id'],
+                    restaurantId: widget.restaurant['id'] ?? widget.restaurant['resid'],
                     restaurantName: widget.restaurant['resname'] ?? 'Restaurant',
                   ),
                 ),
@@ -361,7 +362,7 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => MenuPage(
-                      restaurantId: widget.restaurant['id'],
+                      restaurantId: widget.restaurant['id'] ?? widget.restaurant['resid'],
                       restaurantName: widget.restaurant['resname'] ?? 'Restaurant',
                     ),
                   ),
@@ -418,7 +419,7 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item['name'] ?? item['itemname'] ?? 'Menu Item',
+                    item['itemname'] ?? item['name'] ?? 'Menu Item',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -426,11 +427,11 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
                   ),
                   const SizedBox(height: 4),
 
-                  if ((item['description'] ?? item['itemdesc'] ?? '')
+                  if ((item['itemdesc'] ?? item['description'] ?? '')
                       .toString()
                       .isNotEmpty)
                     Text(
-                      item['description'] ?? item['itemdesc'] ?? '',
+                      item['itemdesc'] ?? item['description'] ?? '',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 13),
@@ -458,7 +459,7 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '₱${(item['price'] ?? item['itemprice'] ?? 0).toStringAsFixed(2)}',
+                  '₱${(item['itemprice'] ?? item['price'] ?? 0).toStringAsFixed(2)}',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
@@ -466,7 +467,7 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
                 ),
                 const SizedBox(height: 8),
                 IconButton(
-                  onPressed: item['is_available'] != false
+                  onPressed: (item['availability'] != false && item['is_available'] != false)
                       ? () => _addToCart(item)
                       : null,
                   style: IconButton.styleFrom(
@@ -531,7 +532,7 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
             child: ListTile(
               leading: const Icon(Icons.location_on, color: Colors.orange),
               title: const Text('Delivery Address'),
-              subtitle: Text(widget.restaurant['address'] ?? '123 Food Street, Manila'),
+              subtitle: Text(widget.restaurant['address'] ?? widget.restaurant['resaddress'] ?? '123 Food Street, Manila'),
               onTap: () {
                 // TODO: Open maps
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -577,7 +578,7 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
                 ListTile(
                   leading: const Icon(Icons.phone, color: Colors.orange),
                   title: const Text('Phone'),
-                  subtitle: Text(widget.restaurant['phone'] ?? '+63 912 345 6789'),
+                  subtitle: Text(widget.restaurant['phone'] ?? widget.restaurant['resphone'] ?? '+63 912 345 6789'),
                   onTap: () {
                     // TODO: Implement phone call
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -645,14 +646,94 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
     );
   }
 
-  void _addToCart(Map<String, dynamic> item) {
-    // TODO: Integrate with your cart system
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Added ${item['name']} to cart'),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 1),
-      ),
-    );
+  // UPDATED: Fully Integrated Supabase Cart Logic
+  Future<void> _addToCart(Map<String, dynamic> item) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please log in to add items to your cart.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Show immediate feedback to user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Adding ${item['itemname'] ?? item['name']} to cart...'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+
+      // 1. Get or create active cart
+      var cartResponse = await supabase
+          .from('cart')
+          .select()
+          .eq('userid', user.id)
+          .eq('status', 'active')
+          .maybeSingle();
+
+      String cartId;
+      if (cartResponse == null) {
+        final newCart = await supabase
+            .from('cart')
+            .insert({'userid': user.id, 'status': 'active', 'subtotal': 0})
+            .select()
+            .single();
+        cartId = newCart['cartid'];
+      } else {
+        cartId = cartResponse['cartid'];
+      }
+
+      // Get appropriate Item ID based on schema
+      final itemId = item['itemid'] ?? item['id'];
+
+      // 2. Check if item already exists in cart
+      var existingItem = await supabase
+          .from('cart_item')
+          .select()
+          .eq('cartid', cartId)
+          .eq('itemid', itemId)
+          .maybeSingle();
+
+      if (existingItem != null) {
+        // Update existing quantity
+        await supabase.from('cart_item').update({
+          'quantity': existingItem['quantity'] + 1,
+        }).eq('cartitemid', existingItem['cartitemid']);
+      } else {
+        // Insert new cart item
+        await supabase.from('cart_item').insert({
+          'cartid': cartId,
+          'itemid': itemId,
+          'quantity': 1,
+        });
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${item['itemname'] ?? item['name']} added successfully!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to add to cart: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 }
