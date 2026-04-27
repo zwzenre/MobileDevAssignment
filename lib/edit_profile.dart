@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'edit_address.dart';
 
 class EditProfile extends StatefulWidget {
   const EditProfile({super.key});
@@ -119,15 +120,35 @@ class _EditProfileState extends State<EditProfile> {
 
             const SizedBox(height: 15),
 
-            TextField(
-              controller: addressController,
-              decoration: InputDecoration(
-                labelText: "Address",
-                filled: true,
-                fillColor: theme.cardColor,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+            GestureDetector(
+              onTap: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const EditAddressPage(),
+                  ),
+                );
+
+                // if address page returns value
+                if (result != null) {
+                  setState(() {
+                    addressController.text = result;
+                  });
+                }
+              },
+              child: AbsorbPointer(
+                child: TextField(
+                  controller: addressController,
+                  decoration: InputDecoration(
+                    labelText: "Address",
+                    suffixIcon: const Icon(Icons.arrow_forward_ios, size: 16),
+                    filled: true,
+                    fillColor: theme.cardColor,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
                 ),
               ),
             ),

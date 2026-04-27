@@ -6,6 +6,7 @@ import 'all_categories.dart';
 import 'all_restaurants.dart';
 import 'all_items.dart';
 import 'restaurant_details_page.dart';
+import 'promo_page.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -96,34 +97,43 @@ class _HomeState extends State<Home> {
   Widget _buildBanner() {
     final theme = Theme.of(context);
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      height: 140,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'WEEKLY SPECIAL OFFER',
-            style: TextStyle(
-              color: theme.colorScheme.onPrimary,
-              fontWeight: FontWeight.bold,
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const PromoPage()),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        height: 140,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primary,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'WEEKLY SPECIAL OFFER',
+              style: TextStyle(
+                color: theme.colorScheme.onPrimary,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '50% OFF',
-            style: TextStyle(
-              color: theme.colorScheme.onPrimary,
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
+            const SizedBox(height: 8),
+            Text(
+              '50% OFF',
+              style: TextStyle(
+                color: theme.colorScheme.onPrimary,
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
