@@ -473,15 +473,6 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
         return;
       }
 
-      // safe delivery fee
-      final deliveryFee = double.tryParse(
-        widget.restaurant['delivery_fee']?.toString() ?? '5.0',
-      ) ?? 5.0;
-
-      // safe restaurant id
-      final restaurantId =
-          widget.restaurant['resid'] ?? widget.restaurant['id'];
-
       // get or create cart
       var cart = await supabase
           .from('cart')
