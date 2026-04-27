@@ -507,6 +507,7 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
 
       // get item id
       final itemId = item['itemid'] ?? item['id'];
+      int newQuantity = 1;
 
       // check existing item
       var existing = await supabase
@@ -518,8 +519,9 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
 
       if (existing != null) {
         // update qty
+        newQuantity = existing['quantity'] + 1;
         await supabase.from('cart_item').update({
-          'quantity': existing['quantity'] + 1,
+          'quantity': newQuantity,
         }).eq('cartitemid', existing['cartitemid']);
       } else {
         // insert new item
@@ -530,9 +532,16 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
         });
       }
 
-      // success message
+      // Get the item name
+      final itemName = item['itemname'] ?? item['name'] ?? 'Item';
+
+      // Show success message with quantity (UPDATED: shows "Item Name x1")
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${item['itemname']} added')),
+        SnackBar(
+          content: Text('$itemName x$newQuantity added to cart'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
       );
 
       // refresh cart count
