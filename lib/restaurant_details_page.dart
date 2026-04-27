@@ -114,6 +114,7 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
               title: Text(
                 widget.restaurant['resname'] ?? 'Restaurant',
                 style: const TextStyle(
+                  color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 20,
                   shadows: [

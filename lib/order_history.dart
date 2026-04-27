@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'order_detail.dart';
-
+import 'package:intl/intl.dart';
 
 class OrderHistory extends StatefulWidget {
   const OrderHistory({super.key});
@@ -19,7 +19,7 @@ class _OrderHistoryState extends State<OrderHistory> {
   @override
   void initState() {
     super.initState();
-    fetchOrders(); // load orders
+    fetchOrders();
   }
 
   Future<void> fetchOrders() async {
@@ -31,7 +31,7 @@ class _OrderHistoryState extends State<OrderHistory> {
             .from('order')
             .select()
             .eq('userid', user.id)
-            .order('orderdate', ascending: false);
+            .order('orderid', ascending: false); // fixed sorting
 
         setState(() {
           orders = data;
@@ -66,41 +66,82 @@ class _OrderHistoryState extends State<OrderHistory> {
       )
           : orders.isEmpty
           ? const Center(
-              child: Text(
-                "No orders yet",
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            )
+        child: Text(
+          "No orders yet",
+          style: TextStyle(fontSize: 16, color: Colors.grey),
+        ),
+      )
           : ListView.builder(
-              itemCount: orders.length,
-              itemBuilder: (context, index) {
-                final order = orders[index];
+        itemCount: orders.length,
+          itemBuilder: (context, index) {
+            final order = orders[index];
 
-                return Card(
-                  margin: const EdgeInsets.all(10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: ListTile(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              OrderDetail(orderId: order['orderid']),
-                        ),
-                      );
-                    },
-                    title: Text("Order #${order['orderid']}"),
-                    subtitle: Text("Date: ${order['orderdate']}"),
-                    trailing: Text(
-                      "RM ${order['totalamount']}",
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+            final date = DateTime.parse(order['created_at']);
+            final formattedDate = DateFormat('dd MMM yyyy • hh:mm a').format(date);
+
+            final shortId = order['orderid'].toString().substring(0, 6);
+
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation: 2,
+              child: ListTile(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => OrderDetail(orderId: order['orderid']),
                     ),
+                  );
+                },
+
+                // LEFT SIDE
+                title: Text(
+                  "Order #$shortId",
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 4),
+                    Text(formattedDate, style: TextStyle(color: Colors.grey[600])),
+                    const SizedBox(height: 6),
+
+                    // status badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        "Completed",
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // RIGHT SIDE
+                trailing: Text(
+                  "RM ${order['totalprice']}",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.orange,
                   ),
-                );
-              },
-            ),
+                ),
+              ),
+            );
+          }
+      ),
     );
   }
 }
