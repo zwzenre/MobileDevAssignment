@@ -69,18 +69,16 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
 
   Future<void> _fetchMenuItems() async {
     try {
-      final allItems = await _service.getItems();
-      final restaurantItems = allItems
-          .where((item) =>
-      item['restaurant_id'] == widget.restaurant['id'] ||
-          item['resid'] == widget.restaurant['id'])
-          .where((item) =>
-      item['is_available'] != false &&
-          item['availability'] != false)
-          .toList();
+      final supabase = Supabase.instance.client;
+
+      final data = await supabase
+          .from('item')
+          .select()
+          .eq('resid', widget.restaurant['resid'])
+          .eq('availability', true);
 
       setState(() {
-        _menuItems = restaurantItems;
+        _menuItems = data;
         _isLoadingMenu = false;
       });
     } catch (e) {
