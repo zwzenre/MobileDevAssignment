@@ -12,7 +12,8 @@ class Payment extends StatefulWidget {
 }
 
 class _PaymentState extends State<Payment> {
-  int _selectedPaymentMethod = 0;
+  int _selectedPaymentMethod = 0; // UI only
+
   List<dynamic> _cartItems = [];
   bool _isLoading = true;
   String? _cartId;
@@ -120,6 +121,8 @@ class _PaymentState extends State<Payment> {
         'userid': user.id,
         'totalprice': total,
         'status': 'pending',
+        'delivery_fee': _deliveryFee,
+        'discount': _discount,
       }).select().single();
 
       for (var item in _cartItems) {
@@ -144,12 +147,12 @@ class _PaymentState extends State<Payment> {
           ),
         );
 
-        Navigator.pushReplacement(
+        Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
-            builder: (_) =>
-                OrderTrackingPage(orderId: order['orderid']),
+            builder: (_) => OrderTrackingPage(orderId: order['orderid']),
           ),
+              (route) => false,
         );
       }
     } catch (e) {
@@ -181,288 +184,226 @@ class _PaymentState extends State<Payment> {
           ? Center(
           child: CircularProgressIndicator(
               color: theme.colorScheme.primary))
-          : Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+          : SingleChildScrollView(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
 
-                  // address
-                  const Text('Delivery Address',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold)),
+            // address
+            const Text('Delivery Address',
+                style:
+                TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
 
-                  const SizedBox(height: 12),
+            Card(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
+              child: ListTile(
+                title: const Text('Home'),
+                subtitle: const Text('123 Jalan Ampang'),
+                trailing: TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const EditAddressPage()),
+                    );
+                  },
+                  child: const Text('Change'),
+                ),
+              ),
+            ),
 
-                  Card(
-                    shape: RoundedRectangleBorder(
-                        borderRadius:
-                        BorderRadius.circular(14)),
-                    child: ListTile(
-                      title: const Text('Home'),
-                      subtitle:
-                      const Text('123 Jalan Ampang'),
-                      trailing: TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) =>
-                                const EditAddressPage()),
-                          );
-                        },
-                        child: const Text('Change'),
-                      ),
-                    ),
-                  ),
+            const SizedBox(height: 24),
 
-                  const SizedBox(height: 24),
+            // summary
+            const Text('Order Summary',
+                style:
+                TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
 
-                  // summary
-                  const Text('Order Summary',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold)),
+            Card(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
 
-                  const SizedBox(height: 12),
+                    ..._cartItems.map((cartItem) {
+                      final itemData = cartItem['item'] ?? {};
 
-                  Card(
-                    shape: RoundedRectangleBorder(
-                        borderRadius:
-                        BorderRadius.circular(14)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
+                      final price = num.tryParse(
+                          (itemData['itemprice'] ?? 0).toString())
+                          ?.toDouble() ??
+                          0.0;
+
+                      return Row(
+                        mainAxisAlignment:
+                        MainAxisAlignment.spaceBetween,
                         children: [
-
-                          ..._cartItems.map((cartItem) {
-                            final itemData =
-                                cartItem['item'] ?? {};
-
-                            final price = num.tryParse(
-                                (itemData['itemprice'] ?? 0)
-                                    .toString())
-                                ?.toDouble() ??
-                                0.0;
-
-                            return Padding(
-                              padding:
-                              const EdgeInsets.only(
-                                  bottom: 8),
-                              child: Row(
-                                mainAxisAlignment:
-                                MainAxisAlignment
-                                    .spaceBetween,
-                                children: [
-                                  Text(
-                                      '${cartItem['quantity']}x ${itemData['itemname']}'),
-                                  Text(
-                                    'RM ${(price * cartItem['quantity']).toStringAsFixed(2)}',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
-
-                          const Divider(),
-
-                          Row(
-                            mainAxisAlignment:
-                            MainAxisAlignment
-                                .spaceBetween,
-                            children: [
-                              const Text('Subtotal'),
-                              Text(
-                                'RM ${_subtotal.toStringAsFixed(2)}',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ],
+                          Text(
+                              '${cartItem['quantity']}x ${itemData['itemname']}'),
+                          Text(
+                            'RM ${(price * cartItem['quantity']).toStringAsFixed(2)}',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold),
                           ),
+                        ],
+                      );
+                    }),
 
-                          Row(
-                            mainAxisAlignment:
-                            MainAxisAlignment
-                                .spaceBetween,
-                            children: [
-                              const Text('Delivery Fee'),
-                              Text(
-                                'RM ${_deliveryFee.toStringAsFixed(2)}',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ],
+                    const Divider(),
+
+                    Row(
+                      mainAxisAlignment:
+                      MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Subtotal'),
+                        Text('RM ${_subtotal.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+
+                    Row(
+                      mainAxisAlignment:
+                      MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Delivery Fee'),
+                        Text('RM ${_deliveryFee.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+
+                    if (_discount > 0)
+                      Row(
+                        mainAxisAlignment:
+                        MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Discount',
+                              style: TextStyle(color: Colors.green)),
+                          Text(
+                            '- RM ${_discount.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green),
                           ),
-
-                          if (_discount > 0)
-                            Row(
-                              mainAxisAlignment:
-                              MainAxisAlignment
-                                  .spaceBetween,
-                              children: [
-                                const Text('Discount',
-                                    style: TextStyle(
-                                        color:
-                                        Colors.green)),
-                                Text(
-                                  '- RM ${_discount.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green,
-                                  ),
-                                ),
-                              ],
-                            ),
                         ],
                       ),
-                    ),
-                  ),
+                  ],
+                ),
+              ),
+            ),
 
-                  const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-                  // promo
-                  const Text('Promotion',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold)),
+            // promo
+            const Text(
+              'Promotion',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
 
-                  const SizedBox(height: 12),
+            const SizedBox(height: 12),
 
-                  ListTile(
-                    title: Text(
-                      _selectedPromo == null
-                          ? 'Apply Promo'
-                          : _selectedPromo!['code'],
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold),
-                    ),
-                    trailing:
-                    const Icon(Icons.chevron_right),
-                    onTap: () async {
-                      final promo = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) =>
-                            const PromoPage()),
-                      );
+            ListTile(
+              title: Text(
+                _selectedPromo == null
+                    ? 'Apply Promo'
+                    : _selectedPromo!['code'],
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                final promo = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PromoPage()),
+                );
 
-                      if (promo != null)
-                        _applyPromo(promo);
-                    },
-                  ),
+                if (promo != null) {
+                  _applyPromo(promo);
+                }
+              },
+            ),
 
-                  const SizedBox(height: 80),
-                ],
+            const SizedBox(height: 24),
+
+            // method UI only
+            const Text('Payment Method',
+                style:
+                TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+
+            _buildPaymentOption(0, Icons.money, 'Cash on Delivery'),
+            _buildPaymentOption(1, Icons.account_balance_wallet, 'E-Wallet / TNG'),
+            _buildPaymentOption(2, Icons.credit_card, 'Credit / Debit Card'),
+
+            const SizedBox(height: 100),
+          ],
+        ),
+      ),
+
+      // button
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+        child: SafeArea(
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: (_cartItems.isEmpty || _isLoading)
+                  ? null
+                  : _placeOrder,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30)),
+              ),
+              child: Text(
+                'Place Order - RM ${total.toStringAsFixed(2)}',
+                style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
           ),
-
-          // summary
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(20)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black
-                      .withValues(alpha: 0.1),
-                  blurRadius: 10,
-                )
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-
-                Row(
-                  mainAxisAlignment:
-                  MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Total',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16)),
-                    Text(
-                      'RM ${(_subtotal + _deliveryFee - _discount).toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color:
-                        theme.colorScheme.primary,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 12),
-
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: (_cartItems.isEmpty ||
-                        _isLoading)
-                        ? null
-                        : _placeOrder,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                      theme.colorScheme.primary,
-                      padding:
-                      const EdgeInsets.symmetric(
-                          vertical: 14),
-                      shape:
-                      RoundedRectangleBorder(
-                        borderRadius:
-                        BorderRadius.circular(
-                            30),
-                      ),
-                    ),
-                    child: Text(
-                      'Place Order - RM ${(_subtotal + _deliveryFee - _discount).toStringAsFixed(2)}',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: theme
-                              .colorScheme.onPrimary),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
+    );
+  }
 
-      // bottom buttons
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 2, // cart tab active
-        selectedItemColor: theme.colorScheme.primary,
-        unselectedItemColor: Colors.grey,
-        onTap: (index) {
-          if (index == 0) {
-            Navigator.popUntil(context, (route) => route.isFirst);
-          } else if (index == 1) {
-            // navigate to search
-          } else if (index == 2) {
-            Navigator.pop(context);
-          } else if (index == 3) {
-            // navigate to account
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.shopping_cart), label: 'Cart'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.person), label: 'Account'),
-        ],
+  /// PAYMENT OPTION UI
+  Widget _buildPaymentOption(int index, IconData icon, String title) {
+    final isSelected = _selectedPaymentMethod == index;
+
+    return GestureDetector(
+      onTap: () => setState(() => _selectedPaymentMethod = index),
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(
+            color: isSelected
+                ? Theme.of(context).colorScheme.primary
+                : Colors.transparent,
+            width: 2,
+          ),
+        ),
+        child: ListTile(
+          leading: Icon(icon,
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary
+                  : Colors.grey),
+          title: Text(title,
+              style: TextStyle(
+                  fontWeight:
+                  isSelected ? FontWeight.bold : FontWeight.normal)),
+          trailing: isSelected
+              ? Icon(Icons.check_circle,
+              color: Theme.of(context).colorScheme.primary)
+              : const Icon(Icons.circle_outlined),
+        ),
       ),
     );
   }

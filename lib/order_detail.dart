@@ -16,8 +16,10 @@ class _OrderDetailState extends State<OrderDetail> {
   List items = [];
   bool isLoading = true;
 
-  double deliveryFee = 5.0;
+  double deliveryFee = 0;
   double subtotal = 0;
+  double total = 0;
+  double discount = 0;
 
   @override
   void initState() {
@@ -27,31 +29,38 @@ class _OrderDetailState extends State<OrderDetail> {
 
   Future<void> fetchOrderItems() async {
     try {
+      // get order data
+      final orderData = await supabase
+          .from('order')
+          .select('totalprice, delivery_fee, discount')
+          .eq('orderid', widget.orderId)
+          .single();
+
+      total = double.tryParse(orderData['totalprice'].toString()) ?? 0.0;
+      deliveryFee =
+          double.tryParse(orderData['delivery_fee'].toString()) ?? 0.0;
+      discount =
+          double.tryParse(orderData['discount'].toString()) ?? 0.0;
+
+      // get items
       final data = await supabase
           .from('order_item')
-          .select('quantity, item:itemid (itemname, itemprice)')
+          .select('quantity, price, item:itemid (itemname)')
           .eq('orderid', widget.orderId);
 
-      print("Order ID: ${widget.orderId}");
-      print("Fetched items: $data");
-
-      double total = 0;
+      double tempSubtotal = 0;
 
       for (var i in data) {
-        final item = i['item'];
-
-        if (item == null) continue;
-
         final price =
-            double.tryParse(item['itemprice'].toString()) ?? 0.0;
+            double.tryParse(i['price'].toString()) ?? 0.0;
         final qty = i['quantity'] ?? 0;
 
-        total += price * qty;
+        tempSubtotal += price * qty;
       }
 
       setState(() {
         items = data;
-        subtotal = total;
+        subtotal = tempSubtotal;
         isLoading = false;
       });
     } catch (e) {
@@ -78,7 +87,7 @@ class _OrderDetailState extends State<OrderDetail> {
       )
           : items.isEmpty
           ? const Center(
-        child: Text("This order has no items (data error)"),
+        child: Text("No items found"),
       )
           : SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -103,16 +112,16 @@ class _OrderDetailState extends State<OrderDetail> {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
+                    // items
                     ...items.map((i) {
                       final item = i['item'];
-
-                      if (item == null) {
-                        return const SizedBox();
-                      }
+                      if (item == null) return const SizedBox();
 
                       final price = double.tryParse(
-                          item['itemprice'].toString()) ??
+                        i['price'].toString(),
+                      ) ??
                           0.0;
+
                       final qty = i['quantity'];
 
                       return Padding(
@@ -131,6 +140,8 @@ class _OrderDetailState extends State<OrderDetail> {
                             ),
                             Text(
                               "RM ${(price * qty).toStringAsFixed(2)}",
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
@@ -139,44 +150,78 @@ class _OrderDetailState extends State<OrderDetail> {
 
                     const Divider(height: 24),
 
+                    // subtotal
                     Row(
                       mainAxisAlignment:
                       MainAxisAlignment.spaceBetween,
                       children: [
                         const Text("Subtotal"),
                         Text(
-                            "RM ${subtotal.toStringAsFixed(2)}"),
+                          "RM ${subtotal.toStringAsFixed(2)}",
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold),
+                        ),
                       ],
                     ),
 
                     const SizedBox(height: 8),
 
+                    // delivery
                     Row(
                       mainAxisAlignment:
                       MainAxisAlignment.spaceBetween,
                       children: [
                         const Text("Delivery Fee"),
                         Text(
-                            "RM ${deliveryFee.toStringAsFixed(2)}"),
+                          "RM ${deliveryFee.toStringAsFixed(2)}",
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold),
+                        ),
                       ],
                     ),
 
+                    // discount
+                    if (discount > 0) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment:
+                        MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "Discount",
+                            style:
+                            TextStyle(color: Colors.green),
+                          ),
+                          Text(
+                            "- RM ${discount.toStringAsFixed(2)}",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+
                     const SizedBox(height: 12),
 
+                    // total
                     Row(
                       mainAxisAlignment:
                       MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
                           "Total",
-                          style:
-                          TextStyle(fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          "RM ${(subtotal + deliveryFee).toStringAsFixed(2)}",
+                          "RM ${total.toStringAsFixed(2)}",
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.primary,
+                            fontSize: 16,
+                            color:
+                            theme.colorScheme.primary,
                           ),
                         ),
                       ],
