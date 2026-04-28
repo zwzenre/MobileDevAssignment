@@ -15,9 +15,9 @@ class _PaymentState extends State<Payment> {
   List<dynamic> _cartItems = [];
   bool _isLoading = true;
   String? _cartId;
-  final double _deliveryFee = 5.00;
+  double _deliveryFee = 0.0;
 
-  // ✅ PROMO STATE
+  // promo
   Map? _selectedPromo;
   double _discount = 0;
 
@@ -29,6 +29,7 @@ class _PaymentState extends State<Payment> {
 
   Future<void> _fetchCartItems() async {
     setState(() => _isLoading = true);
+
     try {
       final supabase = Supabase.instance.client;
       final user = supabase.auth.currentUser;
@@ -43,6 +44,19 @@ class _PaymentState extends State<Payment> {
 
         if (cartResponse != null) {
           _cartId = cartResponse['cartid'];
+
+          final restaurantId = cartResponse['resid'];
+
+          if (restaurantId != null) {
+            final restaurant = await supabase
+                .from('restaurant')
+                .select('delivery_fee')
+                .eq('resid', restaurantId)
+                .single();
+
+            _deliveryFee =
+                (restaurant['delivery_fee'] as num?)?.toDouble() ?? 0.0;
+          }
 
           final itemsResponse = await supabase
               .from('cart_item')
@@ -74,7 +88,7 @@ class _PaymentState extends State<Payment> {
     return total;
   }
 
-  // ✅ APPLY PROMO
+  // apply promo
   void _applyPromo(Map promo) {
     double discount = 0;
 
@@ -99,7 +113,7 @@ class _PaymentState extends State<Payment> {
 
       final order = await supabase.from('order').insert({
         'userid': user.id,
-        'totalprice': _subtotal + _deliveryFee - _discount, // ✅ UPDATED
+        'totalprice': _subtotal + _deliveryFee - _discount,
         'status': 'pending',
       }).select().single();
 
@@ -164,7 +178,7 @@ class _PaymentState extends State<Payment> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
 
-            /// ADDRESS
+            // address
             const Text(
               'Delivery Address',
               style:
@@ -213,7 +227,7 @@ class _PaymentState extends State<Payment> {
 
             const SizedBox(height: 24),
 
-            /// SUMMARY
+            // summary
             const Text(
               'Order Summary',
               style:
@@ -281,7 +295,7 @@ class _PaymentState extends State<Payment> {
                       ],
                     ),
 
-                    // ✅ DISCOUNT SHOW
+                    // discount
                     if (_discount > 0)
                       Row(
                         mainAxisAlignment:
@@ -304,7 +318,7 @@ class _PaymentState extends State<Payment> {
 
             const SizedBox(height: 24),
 
-            /// PROMO
+            // promo
             const Text(
               'Promotion',
               style:
@@ -328,7 +342,7 @@ class _PaymentState extends State<Payment> {
                       color: theme.colorScheme.primary),
                 ),
 
-                // ✅ SHOW SELECTED PROMO
+                // show promo
                 title: Text(
                   _selectedPromo == null
                       ? 'Apply Promo'
@@ -360,7 +374,7 @@ class _PaymentState extends State<Payment> {
 
             const SizedBox(height: 24),
 
-            /// PAYMENT METHOD
+            // payment
             const Text(
               'Payment Method',
               style:
