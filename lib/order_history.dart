@@ -31,7 +31,7 @@ class _OrderHistoryState extends State<OrderHistory> {
             .from('order')
             .select()
             .eq('userid', user.id)
-            .order('orderid', ascending: false); // fixed sorting
+            .order('created_at', ascending: false);
 
         setState(() {
           orders = data;
@@ -49,10 +49,22 @@ class _OrderHistoryState extends State<OrderHistory> {
     });
   }
 
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'completed':
+        return Colors.green;
+      case 'pending':
+        return Colors.orange;
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text("Order History"),
         backgroundColor: Theme.of(context).colorScheme.primary,
@@ -65,82 +77,87 @@ class _OrderHistoryState extends State<OrderHistory> {
         ),
       )
           : orders.isEmpty
-          ? const Center(
-        child: Text(
-          "No orders yet",
-          style: TextStyle(fontSize: 16, color: Colors.grey),
-        ),
-      )
+          ? const Center(child: Text("No orders yet"))
           : ListView.builder(
         itemCount: orders.length,
-          itemBuilder: (context, index) {
-            final order = orders[index];
+        itemBuilder: (context, index) {
+          final order = orders[index];
 
-            final date = DateTime.parse(order['created_at']);
-            final formattedDate = DateFormat('dd MMM yyyy • hh:mm a').format(date);
+          final date = DateTime.parse(order['created_at']);
+          final formattedDate =
+          DateFormat('dd MMM yyyy • hh:mm a').format(date);
 
-            final shortId = order['orderid'].toString().substring(0, 6);
+          final shortId =
+          order['orderid'].toString().substring(0, 6);
 
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              elevation: 2,
-              child: ListTile(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => OrderDetail(orderId: order['orderid']),
-                    ),
-                  );
-                },
+          final status = order['status'] ?? 'unknown';
 
-                // LEFT SIDE
-                title: Text(
-                  "Order #$shortId",
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
+          final total = double.tryParse(
+              order['totalprice'].toString()) ??
+              0.0;
 
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 4),
-                    Text(formattedDate, style: TextStyle(color: Colors.grey[600])),
-                    const SizedBox(height: 6),
-
-                    // status badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        "Completed",
-                        style: TextStyle(
-                          color: Colors.green,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                // RIGHT SIDE
-                trailing: Text(
-                  "RM ${order['totalprice']}",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Colors.orange,
+          return Card(
+            margin: const EdgeInsets.symmetric(
+                horizontal: 12, vertical: 6),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: ListTile(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        OrderDetail(orderId: order['orderid']),
                   ),
+                );
+              },
+
+              title: Text(
+                "Order #$shortId",
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 4),
+                  Text(formattedDate,
+                      style: TextStyle(color: Colors.grey[600])),
+
+                  const SizedBox(height: 6),
+
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _statusColor(status)
+                          .withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      status.toUpperCase(),
+                      style: TextStyle(
+                        color: _statusColor(status),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              trailing: Text(
+                "RM ${total.toStringAsFixed(2)}",
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.orange,
                 ),
               ),
-            );
-          }
+            ),
+          );
+        },
       ),
     );
   }

@@ -32,11 +32,20 @@ class _OrderDetailState extends State<OrderDetail> {
           .select('quantity, item:itemid (itemname, itemprice)')
           .eq('orderid', widget.orderId);
 
+      print("Order ID: ${widget.orderId}");
+      print("Fetched items: $data");
+
       double total = 0;
 
       for (var i in data) {
-        final price = (i['item']['itemprice'] ?? 0).toDouble();
+        final item = i['item'];
+
+        if (item == null) continue;
+
+        final price =
+            double.tryParse(item['itemprice'].toString()) ?? 0.0;
         final qty = i['quantity'] ?? 0;
+
         total += price * qty;
       }
 
@@ -68,7 +77,9 @@ class _OrderDetailState extends State<OrderDetail> {
         ),
       )
           : items.isEmpty
-          ? const Center(child: Text("No items found"))
+          ? const Center(
+        child: Text("This order has no items (data error)"),
+      )
           : SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -80,10 +91,10 @@ class _OrderDetailState extends State<OrderDetail> {
                 fontWeight: FontWeight.bold,
               ),
             ),
+
             const SizedBox(height: 12),
 
             Card(
-              color: theme.cardColor,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
@@ -94,8 +105,14 @@ class _OrderDetailState extends State<OrderDetail> {
                   children: [
                     ...items.map((i) {
                       final item = i['item'];
-                      final price =
-                      (item['itemprice'] ?? 0).toDouble();
+
+                      if (item == null) {
+                        return const SizedBox();
+                      }
+
+                      final price = double.tryParse(
+                          item['itemprice'].toString()) ??
+                          0.0;
                       final qty = i['quantity'];
 
                       return Padding(
@@ -108,15 +125,12 @@ class _OrderDetailState extends State<OrderDetail> {
                             Expanded(
                               child: Text(
                                 "$qty x ${item['itemname']}",
-                                style: theme.textTheme.bodyMedium
-                                    ?.copyWith(
-                                  fontWeight: FontWeight.w500,
-                                ),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w500),
                               ),
                             ),
                             Text(
                               "RM ${(price * qty).toStringAsFixed(2)}",
-                              style: theme.textTheme.bodyMedium,
                             ),
                           ],
                         ),
@@ -125,62 +139,44 @@ class _OrderDetailState extends State<OrderDetail> {
 
                     const Divider(height: 24),
 
-                    // SUBTOTAL
                     Row(
                       mainAxisAlignment:
                       MainAxisAlignment.spaceBetween,
                       children: [
+                        const Text("Subtotal"),
                         Text(
-                          "Subtotal",
-                          style: TextStyle(
-                            color: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.6),
-                          ),
-                        ),
-                        Text(
-                          "RM ${subtotal.toStringAsFixed(2)}",
-                        ),
+                            "RM ${subtotal.toStringAsFixed(2)}"),
                       ],
                     ),
+
                     const SizedBox(height: 8),
 
-                    // DELIVERY
                     Row(
                       mainAxisAlignment:
                       MainAxisAlignment.spaceBetween,
                       children: [
+                        const Text("Delivery Fee"),
                         Text(
-                          "Delivery Fee",
-                          style: TextStyle(
-                            color: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.6),
-                          ),
-                        ),
-                        Text(
-                          "RM ${deliveryFee.toStringAsFixed(2)}",
-                        ),
+                            "RM ${deliveryFee.toStringAsFixed(2)}"),
                       ],
                     ),
 
                     const SizedBox(height: 12),
 
-                    // TOTAL
                     Row(
                       mainAxisAlignment:
                       MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
+                        const Text(
                           "Total",
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style:
+                          TextStyle(fontWeight: FontWeight.bold),
                         ),
                         Text(
                           "RM ${(subtotal + deliveryFee).toStringAsFixed(2)}",
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: theme.colorScheme.primary,
-                            fontSize: 16,
                           ),
                         ),
                       ],
