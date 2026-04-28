@@ -465,7 +465,7 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
       final supabase = Supabase.instance.client;
       final user = supabase.auth.currentUser;
 
-      // check login
+      // login check
       if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please log in')),
@@ -473,7 +473,11 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
         return;
       }
 
-      // get or create cart
+      // restaurant id
+      final restaurantId =
+          widget.restaurant['resid'] ?? widget.restaurant['id'];
+
+      // get cart
       var cart = await supabase
           .from('cart')
           .select()
@@ -484,18 +488,31 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
       String cartId;
 
       if (cart == null) {
+        // create new cart
         final newCart = await supabase.from('cart').insert({
           'userid': user.id,
           'status': 'active',
           'subtotal': 0,
+          'resid': restaurantId,
         }).select().single();
 
         cartId = newCart['cartid'];
       } else {
+        // prevent different restaurant
+        if (cart['resid'] != restaurantId) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Only one restaurant per order'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+
         cartId = cart['cartid'];
       }
 
-      // get item id
+      // item id
       final itemId = item['itemid'] ?? item['id'];
       int newQuantity = 1;
 
@@ -508,13 +525,12 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
           .maybeSingle();
 
       if (existing != null) {
-        // update qty
         newQuantity = existing['quantity'] + 1;
+
         await supabase.from('cart_item').update({
           'quantity': newQuantity,
         }).eq('cartitemid', existing['cartitemid']);
       } else {
-        // insert new item
         await supabase.from('cart_item').insert({
           'cartid': cartId,
           'itemid': itemId,
@@ -522,22 +538,17 @@ class _RestaurantDetailsPageState extends State<RestaurantDetailsPage> {
         });
       }
 
-      // Get the item name
       final itemName = item['itemname'] ?? item['name'] ?? 'Item';
 
-      // Show success message with quantity (UPDATED: shows "Item Name x1")
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('$itemName x$newQuantity added to cart'),
           backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2),
         ),
       );
 
-      // refresh cart count
       await _fetchCartItemCount();
     } catch (e) {
-      // error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
