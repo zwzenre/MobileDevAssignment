@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'edit_address.dart';
+import 'order_tracking.dart';
 import 'promo_page.dart';
 
 class Payment extends StatefulWidget {
@@ -60,7 +61,7 @@ class _PaymentState extends State<Payment> {
 
           final itemsResponse = await supabase
               .from('cart_item')
-              .select('*, item(*)')
+              .select('*, item(*, restaurant(*))')
               .eq('cartid', _cartId as Object);
 
           setState(() {
@@ -88,7 +89,15 @@ class _PaymentState extends State<Payment> {
     return total;
   }
 
-  // apply promo
+  // ✅ RESTORED: Dynamically fetch delivery fee from the restaurant
+  double get _deliveryFee {
+    if (_cartItems.isEmpty) return 0.0;
+    final itemData = _cartItems.first['item'] ?? {};
+    final restaurantData = itemData['restaurant'] ?? {};
+    return num.tryParse((restaurantData['delivery_fee'] ?? 0).toString())?.toDouble() ?? 0.0;
+  }
+
+  // ✅ APPLY PROMO
   void _applyPromo(Map promo) {
     double discount = 0;
 
@@ -138,7 +147,14 @@ class _PaymentState extends State<Payment> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.popUntil(context, (route) => route.isFirst);
+
+        // Push the tracking page instead of going home
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => OrderTrackingPage(orderId: order['orderid']),
+          ),
+        );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -400,6 +416,13 @@ class _PaymentState extends State<Payment> {
           color: theme.cardColor,
           borderRadius:
           const BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            ),
+          ],
         ),
         child: SafeArea(
           child: ElevatedButton(
