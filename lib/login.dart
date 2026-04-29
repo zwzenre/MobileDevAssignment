@@ -53,8 +53,11 @@ class _LoginPageState extends State<LoginPage> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: SingleChildScrollView(
-        child: Column(
+        body: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: SingleChildScrollView(
+            child: Column(
           children: [
             const SizedBox(height: 80),
 
@@ -97,14 +100,14 @@ class _LoginPageState extends State<LoginPage> {
                   // email
                   TextField(
                     controller: emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
                       hintText: "Email",
-                      prefixIcon: Icon(Icons.email,
-                          color: theme.colorScheme.primary),
+                      prefixIcon: Icon(Icons.email, color: theme.colorScheme.primary),
                       filled: true,
                       fillColor: theme.cardColor,
-                      contentPadding:
-                      const EdgeInsets.symmetric(vertical: 18),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 18),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(15),
                         borderSide: BorderSide.none,
@@ -118,14 +121,14 @@ class _LoginPageState extends State<LoginPage> {
                   TextField(
                     controller: passwordController,
                     obscureText: true,
+                    keyboardType: TextInputType.visiblePassword,
+                    textInputAction: TextInputAction.done,
                     decoration: InputDecoration(
                       hintText: "Password",
-                      prefixIcon: Icon(Icons.lock,
-                          color: theme.colorScheme.primary),
+                      prefixIcon: Icon(Icons.lock, color: theme.colorScheme.primary),
                       filled: true,
                       fillColor: theme.cardColor,
-                      contentPadding:
-                      const EdgeInsets.symmetric(vertical: 18),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 18),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(15),
                         borderSide: BorderSide.none,
@@ -190,6 +193,7 @@ class _LoginPageState extends State<LoginPage> {
           ],
         ),
       ),
+    )
     );
   }
 }

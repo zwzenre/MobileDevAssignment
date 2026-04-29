@@ -17,6 +17,7 @@ class _EditProfileState extends State<EditProfile> {
   final addressController = TextEditingController();
 
   bool isLoading = true;
+  bool isSaving = false;
 
   @override
   void initState() {
@@ -30,7 +31,7 @@ class _EditProfileState extends State<EditProfile> {
 
       if (user != null) {
         final data = await supabase
-            .from('User')
+            .from('user')
             .select()
             .eq('userid', user.id)
             .maybeSingle();
@@ -42,10 +43,9 @@ class _EditProfileState extends State<EditProfile> {
         }
       }
     } catch (e) {
-      print("loadUser error: $e");
+      debugPrint("loadUser error: $e");
     }
 
-    // always stop loading no matter what
     if (mounted) {
       setState(() => isLoading = false);
     }
@@ -53,20 +53,47 @@ class _EditProfileState extends State<EditProfile> {
 
   Future<void> saveProfile() async {
     final user = supabase.auth.currentUser;
-
     if (user == null) return;
 
-    await supabase.from('User').update({
-      'username': usernameController.text,
-      'phone': phoneController.text,
-      'address': addressController.text,
-    }).eq('userid', user.id);
+    setState(() => isSaving = true);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Profile updated")),
-    );
+    try {
+      final response = await supabase
+          .from('user')
+          .update({
+        'username': usernameController.text,
+        'phone': phoneController.text,
+        'address': addressController.text,
+      })
+          .eq('userid', user.id)
+          .select();
 
-    Navigator.pop(context);
+      debugPrint("Update response: $response");
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Profile updated"),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      debugPrint("Save error: $e");
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => isSaving = false);
+    }
   }
 
   @override
@@ -80,94 +107,120 @@ class _EditProfileState extends State<EditProfile> {
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
       ),
-      body: isLoading
-          ? Center(
-        child: CircularProgressIndicator(
-          color: theme.colorScheme.primary,
-        ),
-      )
-          : Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            TextField(
-              controller: usernameController,
-              decoration: InputDecoration(
-                labelText: "Username",
-                filled: true,
-                fillColor: theme.cardColor,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
 
-            const SizedBox(height: 15),
+      body: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: isLoading
+            ? Center(
+          child: CircularProgressIndicator(
+            color: theme.colorScheme.primary,
+          ),
+        )
+            : SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
 
-            TextField(
-              controller: phoneController,
-              decoration: InputDecoration(
-                labelText: "Phone",
-                filled: true,
-                fillColor: theme.cardColor,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 15),
-
-            GestureDetector(
-              onTap: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const EditAddressPage(),
+              // Username
+              TextField(
+                controller: usernameController,
+                keyboardType: TextInputType.name,
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(
+                  labelText: "Username",
+                  filled: true,
+                  fillColor: theme.cardColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
                   ),
-                );
+                ),
+              ),
 
-                // if address page returns value
-                if (result != null) {
-                  setState(() {
-                    addressController.text = result;
-                  });
-                }
-              },
-              child: AbsorbPointer(
-                child: TextField(
-                  controller: addressController,
-                  decoration: InputDecoration(
-                    labelText: "Address",
-                    suffixIcon: const Icon(Icons.arrow_forward_ios, size: 16),
-                    filled: true,
-                    fillColor: theme.cardColor,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
+              const SizedBox(height: 15),
+
+              // Phone
+              TextField(
+                controller: phoneController,
+                keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(
+                  labelText: "Phone",
+                  filled: true,
+                  fillColor: theme.cardColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 15),
+
+              // Address
+              GestureDetector(
+                onTap: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const EditAddressPage(),
+                    ),
+                  );
+
+                  if (result != null) {
+                    setState(() {
+                      addressController.text = result;
+                    });
+                  }
+                },
+                child: AbsorbPointer(
+                  child: TextField(
+                    controller: addressController,
+                    keyboardType: TextInputType.streetAddress,
+                    decoration: InputDecoration(
+                      labelText: "Address",
+                      suffixIcon: const Icon(
+                        Icons.arrow_forward_ios,
+                        size: 16,
+                      ),
+                      filled: true,
+                      fillColor: theme.cardColor,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
 
-            const SizedBox(height: 30),
+              const SizedBox(height: 30),
 
-            ElevatedButton(
-              onPressed: saveProfile,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
-                foregroundColor: theme.colorScheme.onPrimary,
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
+              // Save Button
+              ElevatedButton(
+                onPressed: isSaving ? null : saveProfile,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
                 ),
+                child: isSaving
+                    ? SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    color: theme.colorScheme.onPrimary,
+                    strokeWidth: 2,
+                  ),
+                )
+                    : const Text("Save"),
               ),
-              child: const Text("Save"),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

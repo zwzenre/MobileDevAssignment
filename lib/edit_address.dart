@@ -235,12 +235,14 @@ class _EditAddressPageState extends State<EditAddressPage> {
   // --- UI BUILDER ---
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Edit Address', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.orange,
-        foregroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
         elevation: 0,
         centerTitle: true,
       ),
@@ -248,7 +250,6 @@ class _EditAddressPageState extends State<EditAddressPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Map View reverted back to OpenStreetMap
             SizedBox(
               height: 220,
               child: Stack(
@@ -262,9 +263,7 @@ class _EditAddressPageState extends State<EditAddressPage> {
                     children: [
                       TileLayer(
                         maxZoom: 20,
-                        // Fix: Added "a." subdomain to bypass Flutter's corrupted image cache!
                         urlTemplate: 'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        // Avoid using the word "example" in this string
                         userAgentPackageName: 'com.student.fooddeliveryapp',
                       ),
                       MarkerLayer(
@@ -283,20 +282,21 @@ class _EditAddressPageState extends State<EditAddressPage> {
                     bottom: 16,
                     right: 16,
                     child: FloatingActionButton(
-                      backgroundColor: Theme.of(context).cardColor,
+                      backgroundColor: theme.cardColor,
                       elevation: 4,
                       onPressed: () async {
                         if (_trackingEnabled) {
                           stopTracking();
                         } else {
-                          // Allow autofill to trigger again if they manually press the locate button
                           _hasAutofilled = false;
                           await startTracking();
                         }
                       },
                       child: Icon(
                         _trackingEnabled ? Icons.my_location : Icons.location_searching,
-                        color: _trackingEnabled ? Colors.orange : Colors.grey,
+                        color: _trackingEnabled
+                            ? theme.colorScheme.primary
+                            : Colors.grey,
                       ),
                     ),
                   ),
@@ -304,12 +304,11 @@ class _EditAddressPageState extends State<EditAddressPage> {
               ),
             ),
 
-            // Form Fields
             Transform.translate(
               offset: const Offset(0, -20),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Theme.of(context).scaffoldBackgroundColor,
+                  color: theme.scaffoldBackgroundColor,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
                 ),
                 padding: const EdgeInsets.all(24.0),
@@ -349,14 +348,14 @@ class _EditAddressPageState extends State<EditAddressPage> {
 
                     const SizedBox(height: 32),
 
-                    // Actions
+                    // Save button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _isSaving ? null : _saveAddress,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          foregroundColor: Colors.white,
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: theme.colorScheme.onPrimary,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                           elevation: 0,
@@ -370,7 +369,9 @@ class _EditAddressPageState extends State<EditAddressPage> {
                             : const Text('Save Address', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       ),
                     ),
+
                     const SizedBox(height: 12),
+
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton(
@@ -380,7 +381,13 @@ class _EditAddressPageState extends State<EditAddressPage> {
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                         ),
-                        child: Text('Cancel', style: TextStyle(fontSize: 18, color: Theme.of(context).textTheme.bodyLarge?.color)),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: theme.textTheme.bodyLarge?.color,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -427,28 +434,45 @@ class _EditAddressPageState extends State<EditAddressPage> {
   }
 
   Widget _buildTagButton(BuildContext context, String label, IconData icon) {
+    final theme = Theme.of(context);
     final isSelected = _selectedTag == label;
+
     return GestureDetector(
       onTap: () => setState(() => _selectedTag = label),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.orange.withValues(alpha: 0.1) : Theme.of(context).cardColor,
+          color: isSelected
+              ? theme.colorScheme.primary.withValues(alpha: 0.1)
+              : theme.cardColor,
           borderRadius: BorderRadius.circular(30),
           border: Border.all(
-              color: isSelected ? Colors.orange : Colors.transparent,
-              width: 2
+            color: isSelected
+                ? theme.colorScheme.primary
+                : Colors.transparent,
+            width: 2,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: isSelected ? Colors.orange : Colors.grey, size: 20),
+            Icon(
+              icon,
+              color: isSelected
+                  ? theme.colorScheme.primary
+                  : Colors.grey,
+              size: 20,
+            ),
             const SizedBox(width: 8),
-            Text(label, style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: isSelected ? Colors.orange : Theme.of(context).textTheme.bodyLarge?.color,
-            )),
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: isSelected
+                    ? theme.colorScheme.primary
+                    : theme.textTheme.bodyLarge?.color,
+              ),
+            ),
           ],
         ),
       ),
