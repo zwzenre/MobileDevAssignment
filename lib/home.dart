@@ -70,8 +70,7 @@ class _HomeState extends State<Home> {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: GestureDetector(
         onTap: () {
-          Navigator.push(
-            context,
+          Navigator.of(context, rootNavigator: false).push(
             MaterialPageRoute(builder: (_) => const SearchPage()),
           );
         },

@@ -4,7 +4,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'restaurant_details_page.dart';
 
 class SearchPage extends StatefulWidget {
-  const SearchPage({super.key});
+  final bool showBackButton;
+  final VoidCallback? onBack;
+
+  const SearchPage({
+    super.key,
+    this.showBackButton = false,
+    this.onBack,
+  });
 
   @override
   State<SearchPage> createState() => _SearchPageState();
@@ -85,6 +92,15 @@ class _SearchPageState extends State<SearchPage> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: widget.showBackButton
+            ? IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: widget.onBack ??
+                  () {
+                Navigator.of(context).maybePop();
+              },
+        )
+            : null,
         title: const Text("Search"),
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
