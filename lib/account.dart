@@ -222,13 +222,17 @@ class _AccountPageState extends State<AccountPage> {
 
                   // edit profile
                   ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
+                    onPressed: () async {
+                      final updated = await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => const EditProfile(),
                         ),
                       );
+
+                      if (updated == true) {
+                        fetchUser();
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: theme.colorScheme.primary,
