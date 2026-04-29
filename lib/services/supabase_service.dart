@@ -79,4 +79,23 @@ class SupabaseService {
 
     return unique;
   }
+
+  Future<void> resetPassword(String email) async {
+    await supabase.auth.resetPasswordForEmail(
+      email,
+      redirectTo: 'io.supabase.flutter://reset-callback',
+    );
+
+    print("RESET LINK REQUESTED");
+  }
+
+  Future<void> updatePassword(String newPassword) async {
+    final response = await Supabase.instance.client.auth.updateUser(
+      UserAttributes(password: newPassword),
+    );
+
+    if (response.user == null) {
+      throw Exception("Failed to update password");
+    }
+  }
 }

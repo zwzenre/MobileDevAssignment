@@ -1,3 +1,4 @@
+import 'package:MobileDevAssignment/main_navigation.dart';
 import 'package:flutter/material.dart';
 import 'main.dart';
 import 'services/supabase_service.dart';
@@ -34,17 +35,44 @@ class _LoginPageState extends State<LoginPage> {
         passwordController.text.trim(),
       );
 
-      Navigator.pushReplacement(
+      print("LOGIN SUCCESS");
+
+      Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const AuthGate()),
+        MaterialPageRoute(builder: (_) => const MainNavigation()),
+            (route) => false,
       );
+
     } catch (e) {
+      print("LOGIN ERROR: $e");
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString())),
       );
     }
 
     setState(() => isLoading = false);
+  }
+
+  void forgotPassword() async {
+    if (emailController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Enter your email first")),
+      );
+      return;
+    }
+
+    try {
+      await service.resetPassword(emailController.text.trim());
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Password reset email sent")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
   }
 
   @override
@@ -132,6 +160,17 @@ class _LoginPageState extends State<LoginPage> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(15),
                         borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: forgotPassword,
+                      child: Text(
+                        "Forgot Password?",
+                        style: TextStyle(color: theme.colorScheme.primary),
                       ),
                     ),
                   ),
