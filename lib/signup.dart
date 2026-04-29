@@ -26,7 +26,7 @@ class _SignupPageState extends State<SignupPage> {
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Signup successful! Please login.")),
+        const SnackBar(content: Text("Signup successful!")),
       );
 
       Navigator.pop(context);

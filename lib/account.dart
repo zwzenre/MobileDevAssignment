@@ -1,3 +1,4 @@
+import 'package:MobileDevAssignment/main.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
@@ -49,10 +50,9 @@ class _AccountPageState extends State<AccountPage> {
 
   // logout
   Future<void> logout() async {
-    await supabase.auth.signOut();
+    await Supabase.instance.client.auth.signOut();
 
-    Navigator.pushAndRemoveUntil(
-      context,
+    Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginPage()),
           (route) => false,
     );
